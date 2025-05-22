@@ -15,6 +15,7 @@ class Configs:
             "large_decor": "tiles/large_decor",
             "player": "player.png",
             "clouds": "clouds",
+            "enemy": "kenny/Characters/enemy.png"
         }
 
         # tilemap settings
@@ -30,3 +31,7 @@ class Configs:
         self.spawn_pos = (64, 50)
         self.player_size = (8, 15)
         self.max_jump_count = 2
+
+        #enemy settings
+        self.enemy_spawn_pos = (-80, 112) 
+        self.enemy_size = (8, 15)

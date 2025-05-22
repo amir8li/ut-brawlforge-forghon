@@ -3,7 +3,7 @@ import os
 import sys
 
 from src.tilemap import Tilemap
-from src.entities import Player
+from src.entities import Player, Enemy
 from src.utils import load_image, load_images
 from src.clouds import Clouds
 
@@ -25,11 +25,13 @@ class Game:
             "large_decor": load_images(configs.assets["large_decor"]),
             "player": load_image(configs.assets["player"]),
             "clouds": load_images(configs.assets["clouds"]),
+            "enemy": load_image(configs.assets["enemy"])
         }
 
         self.movement = [False, False]
         self.space_held = False
         self.player = Player(self, configs.spawn_pos, configs.player_size)
+        self.enemy = Enemy(self, configs.enemy_spawn_pos, configs.enemy_size)
 
         self.clouds = Clouds(self.assets["clouds"], count=16)
         self.tilemap = Tilemap(self, tile_size=configs.tile_size)
@@ -78,6 +80,9 @@ class Game:
 
             self.player.update(self.tilemap, ((self.movement[1] - self.movement[0])*self.configs.movement_speed, 0))
             self.player.render(self.display, offset=self.scroll)
+
+            self.enemy.render(self.display, offset=self.scroll)
+            self.enemy.update(self.tilemap, (0, 0))
 
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
             pygame.display.update()

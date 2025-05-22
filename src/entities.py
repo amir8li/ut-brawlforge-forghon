@@ -72,3 +72,12 @@ class Player(PhysicsEntity):
         if self.game.space_held and self.jump_count == 0:
             self.velocity[1] = -1 * self.game.configs.jump_velocity
             self.jump_count += 1
+
+class Enemy(PhysicsEntity):
+    def __init__(self, game, pos, size):
+        super().__init__(game, "enemy", pos, size)
+        self.HP = 100
+
+    def update(self, tilemap, movement=(0, 0)):
+        super().update(tilemap, movement)
+        

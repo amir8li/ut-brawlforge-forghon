@@ -23,6 +23,9 @@ class Tilemap:
         
         self.tilemap["3;8"] = {'type': 'large_decor', 'variant': 2, 'pos': (3, 8)}
 
+        for i in range(5):
+            self.tilemap[str(-5+i)+";7"] = {'type': 'stone', 'variant': 1, 'pos': (-5+i, 7)}
+
     def tiles_around(self, pos):
         tiles = []
         tile_loc = (int(pos[0] // self.tile_size), int(pos[1] // self.tile_size))

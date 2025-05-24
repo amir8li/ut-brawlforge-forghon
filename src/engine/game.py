@@ -6,6 +6,7 @@ from src.tilemap import Tilemap
 from src.entities import Player, Enemy
 from src.utils import load_image, load_images
 from src.clouds import Clouds
+from src.bullet import Bullet
 
 class Game:
     def __init__(self, configs):
@@ -25,20 +26,22 @@ class Game:
             "large_decor": load_images(configs.assets["large_decor"]),
             "player": load_image(configs.assets["player"]),
             "clouds": load_images(configs.assets["clouds"]),
-            "enemy": load_image(configs.assets["enemy"])
+            "enemy": load_image(configs.assets["enemy"], configs.enemy_size),
+            "bullet": load_image(configs.assets["bullet"], scale=(7, 7))
         }
 
         self.movement = [False, False]
         self.space_held = False
         self.player = Player(self, configs.player_spawn_pos, configs.player_size)
-        self.assets["enemy"] = pygame.transform.scale(self.assets["enemy"], configs.enemy_size)
         self.enemy = Enemy(self, configs.enemy_spawn_pos, configs.enemy_size)
+        self.bullet = Bullet(self, configs.bullet_size)
 
         self.clouds = Clouds(self.assets["clouds"], count=16)
         self.tilemap = Tilemap(self, tile_size=configs.tile_size)
 
         self.scroll = [0, 0]
         self.lose = False
+        self.enemies_count = 1
     def run(self):
         running = True
         while running:
@@ -61,7 +64,9 @@ class Game:
                         if self.player.jump_count < self.configs.max_jump_count:
                             self.player.velocity[1] = -1 * self.configs.jump_velocity
                             self.player.jump_count += 1
-
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        self.bullet.is_clicked = True
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_a:
                         self.movement[0] = False
@@ -70,7 +75,11 @@ class Game:
                     if event.key == pygame.K_SPACE:
                         self.space_held = False
             if self.player.rect().colliderect(self.enemy.rect()):
-                self.lose = True       
+                self.player.HP -= self.configs.enemy_damage_power
+                if self.player.HP <= 0:
+                    self.lose = True  
+                else:
+                    self.player.pos = list(self.configs.player_spawn_pos)   
 
             if not self.lose:
                 self.scroll[0] += int(self.player.rect().centerx - self.display.get_width() // 2 - self.scroll[0])
@@ -83,9 +92,28 @@ class Game:
 
                 self.player.update(self.tilemap, ((self.movement[1] - self.movement[0])*self.configs.movement_speed, 0))
                 self.player.render(self.display, offset=self.scroll)
-
-                self.enemy.render(self.display, offset=self.scroll)
-                self.enemy.update(self.tilemap, (0, 0))
+                if self.bullet.is_clicked:
+                    if self.bullet.count == 0:
+                        self.bullet.start(self.player)
+                        self.bullet.count = 1
+                    else:
+                        self.bullet.update(self.tilemap)
+                    self.bullet.render(self.display, offset=self.scroll)
+                    
+                if (self.bullet.pos[0] >= self.player.pos[0] + self.configs.bullet_range or  
+                    self.bullet.pos[0] <= self.player.pos[0] - self.configs.bullet_range):  
+                    self.bullet.reset()
+                
+                if self.bullet.rect().colliderect(self.enemy.rect()):
+                    self.bullet.reset()
+                    self.enemy.HP -= self.configs.bullet_damage
+                        
+                if self.enemy.HP == 0:
+                    self.enemies_count -= 1 
+                    self.enemy.remove()
+                else:
+                    self.enemy.render(self.display, offset=self.scroll)
+                    self.enemy.update(self.tilemap, (0, 0))
             else:
                 self.clouds.render(self.display, offset=self.scroll)
                 self.tilemap.render(self.display, offset=self.scroll)

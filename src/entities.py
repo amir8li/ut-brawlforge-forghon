@@ -65,6 +65,7 @@ class Player(PhysicsEntity):
         self.jump_count = 0
         self.HP = 100
 
+
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement)
         if self.collisions["down"]:
@@ -88,6 +89,11 @@ class Enemy(PhysicsEntity):
         elif self.pos[0] <= self.game.configs.left_x_boundary:
             self.flip = False
             self.velocity[0] *= - 1
+
+    def remove(self):
+        self.pos = [-1000, -1000]
+        self.velocity = [0, 0] 
+        self.HP = 0  
 
             
         

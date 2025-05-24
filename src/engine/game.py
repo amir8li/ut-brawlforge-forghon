@@ -30,14 +30,15 @@ class Game:
 
         self.movement = [False, False]
         self.space_held = False
-        self.player = Player(self, configs.spawn_pos, configs.player_size)
+        self.player = Player(self, configs.player_spawn_pos, configs.player_size)
+        self.assets["enemy"] = pygame.transform.scale(self.assets["enemy"], configs.enemy_size)
         self.enemy = Enemy(self, configs.enemy_spawn_pos, configs.enemy_size)
 
         self.clouds = Clouds(self.assets["clouds"], count=16)
         self.tilemap = Tilemap(self, tile_size=configs.tile_size)
 
         self.scroll = [0, 0]
-
+        self.lose = False
     def run(self):
         running = True
         while running:
@@ -68,21 +69,32 @@ class Game:
                         self.movement[1] = False
                     if event.key == pygame.K_SPACE:
                         self.space_held = False
-                        
+            if self.player.rect().colliderect(self.enemy.rect()):
+                self.lose = True       
 
-            self.scroll[0] += int(self.player.rect().centerx - self.display.get_width() // 2 - self.scroll[0])
-            self.scroll[1] += int(self.player.rect().centery - self.display.get_height() // 2 - self.scroll[1])
+            if not self.lose:
+                self.scroll[0] += int(self.player.rect().centerx - self.display.get_width() // 2 - self.scroll[0])
+                self.scroll[1] += int(self.player.rect().centery - self.display.get_height() // 2 - self.scroll[1])
 
-            self.clouds.update()
-            self.clouds.render(self.display, offset=self.scroll)
+                self.clouds.update()
+                self.clouds.render(self.display, offset=self.scroll)
 
-            self.tilemap.render(self.display, offset=self.scroll)
+                self.tilemap.render(self.display, offset=self.scroll)
 
-            self.player.update(self.tilemap, ((self.movement[1] - self.movement[0])*self.configs.movement_speed, 0))
-            self.player.render(self.display, offset=self.scroll)
+                self.player.update(self.tilemap, ((self.movement[1] - self.movement[0])*self.configs.movement_speed, 0))
+                self.player.render(self.display, offset=self.scroll)
 
-            self.enemy.render(self.display, offset=self.scroll)
-            self.enemy.update(self.tilemap, (0, 0))
+                self.enemy.render(self.display, offset=self.scroll)
+                self.enemy.update(self.tilemap, (0, 0))
+            else:
+                self.clouds.render(self.display, offset=self.scroll)
+                self.tilemap.render(self.display, offset=self.scroll)
+                self.player.render(self.display, offset=self.scroll)
+                self.enemy.render(self.display, offset=self.scroll)
+
+                gameover = self.configs.game_over_font.render("GAME OVER!", True, 'red')
+                text_rect = gameover.get_rect(center=(self.display.get_width()/2, self.display.get_height()/2))
+                self.display.blit(gameover, text_rect)
 
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
             pygame.display.update()

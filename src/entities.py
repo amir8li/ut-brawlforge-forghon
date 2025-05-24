@@ -77,7 +77,17 @@ class Enemy(PhysicsEntity):
     def __init__(self, game, pos, size):
         super().__init__(game, "enemy", pos, size)
         self.HP = 100
+        self.velocity[0] = 0.5
 
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement)
+        self.pos[0] += self.velocity[0]
+        if self.pos[0] >= self.game.configs.right_x_boundary:
+            self.flip = True
+            self.velocity[0] *= - 1
+        elif self.pos[0] <= self.game.configs.left_x_boundary:
+            self.flip = False
+            self.velocity[0] *= - 1
+
+            
         

@@ -1,9 +1,14 @@
+import pygame
+
 class Configs:
     def __init__(self):
         # game settings
         self.FPS = 60
         self.screen_size = (1080, 720)
         self.caption = "Forghoon"
+        pygame.font.init()  
+        self.game_over_font = pygame.font.SysFont('Arial', 64, 'bold')
+        
 
         # assets paths
         self.assets = {
@@ -28,10 +33,12 @@ class Configs:
         self.movement_speed = 2
 
         # player settings
-        self.spawn_pos = (64, 50)
+        self.player_spawn_pos = (64, 50)
         self.player_size = (8, 15)
         self.max_jump_count = 2
 
         #enemy settings
-        self.enemy_spawn_pos = (-80, 112) 
-        self.enemy_size = (8, 15)
+        self.enemy_spawn_pos = (-40, 112) 
+        self.enemy_size = (16, 16)
+        self.left_x_boundary = -168
+        self.right_x_boundary = -12

@@ -20,7 +20,8 @@ class Configs:
             "large_decor": "tiles/large_decor",
             "player": "player.png",
             "clouds": "clouds",
-            "enemy": "kenny/Characters/enemy.png"
+            "enemy": "kenny/Characters/enemy.png",
+            "bullet":"shuriken.png"
         }
 
         # tilemap settings
@@ -36,9 +37,18 @@ class Configs:
         self.player_spawn_pos = (64, 50)
         self.player_size = (8, 15)
         self.max_jump_count = 2
+            ##self.y_pos_after_damaging = 50
+
 
         #enemy settings
         self.enemy_spawn_pos = (-40, 112) 
         self.enemy_size = (16, 16)
         self.left_x_boundary = -168
         self.right_x_boundary = -12
+        self.enemy_damage_power = 30
+
+        #bullet settings
+        self.bullet_size = (7, 7)
+        self.bullet_range = 300  
+        self.bullet_damage = 50
+        self.bullet_angle_change = 10

@@ -66,6 +66,7 @@ class Player(PhysicsEntity):
         self.HP = 100
 
 
+
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement)
         if self.collisions["down"]:

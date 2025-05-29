@@ -18,9 +18,7 @@ class Configs:
             "stone": "tiles/stone",
             "decor": "tiles/decor",
             "large_decor": "tiles/large_decor",
-            "player": "player.png",
             "clouds": "clouds",
-            "enemy": "kenny/Characters/enemy.png",
             "bullet":"shuriken.png"
         }
 
@@ -37,8 +35,7 @@ class Configs:
         self.player_spawn_pos = (64, 50)
         self.player_size = (8, 15)
         self.max_jump_count = 2
-            ##self.y_pos_after_damaging = 50
-
+        self.player_anim_offset = (-3, -3)
 
         #enemy settings
         self.enemy_spawn_pos = (-40, 112) 

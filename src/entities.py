@@ -1,24 +1,33 @@
 import pygame
 
 class PhysicsEntity:
-    def __init__(self, game, e_type, pos, size):
+    def __init__(self, game, e_type, pos, size, anim_offset=(0, 0)):
         self.game = game
-        self.e_type = e_type
+        self.type = e_type
         self.pos = list(pos)
         self.size = size
         self.velocity = [0, 0]
         self.collisions = {"up": False, "down": False, "left": False, "right": False}
         self.flip = False
 
+        self.action = ""
+        self.anim_offset = anim_offset
+        self.sef_action("idle")
+
     def rect(self):
         return pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
+    
+    def sef_action(self, action):
+        if action != self.action:
+            self.action = action
+            self.anim = self.game.assets[self.type + '/' + self.action].copy()
 
     def update(self, tilemap, movement=(0, 0)):
         self.collisions = {"up": False, "down": False, "left": False, "right": False}
 
         if movement[0] > 0:
             self.flip = False
-        elif movement[0] < 0:
+        if movement[0] < 0:
             self.flip = True
 
         frame_movement = (movement[0] + self.velocity[0], movement[1] + self.velocity[1])
@@ -52,32 +61,40 @@ class PhysicsEntity:
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity[1] = 0
 
+        self.anim.update()
+
     def render(self, surf, offset=(0, 0)):
-        image = self.game.assets[self.e_type]
-        if self.flip:
-            image = pygame.transform.flip(image, True, False)
-        surf.blit(image, (self.pos[0] - offset[0], self.pos[1] - offset[1]))
+        surf.blit(pygame.transform.flip(self.anim.get_current_image(), self.flip, False), (self.pos[0] - offset[0] + self.anim_offset[0], self.pos[1] - offset[1] + self.anim_offset[1]))
 
 
 class Player(PhysicsEntity):
-    def __init__(self, game, pos, size):
-        super().__init__(game, "player", pos, size)
+    def __init__(self, game, pos, size, anim_offset=(0, 0)):
+        super().__init__(game, "player", pos, size, anim_offset)
+        self.air_time = 0
         self.jump_count = 0
         self.HP = 100
 
-
-
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement)
+
+        self.air_time += 1
         if self.collisions["down"]:
             self.jump_count = 0
+            self.air_time = 0
         if self.game.space_held and self.jump_count == 0:
             self.velocity[1] = -1 * self.game.configs.jump_velocity
             self.jump_count += 1
+        
+        if self.air_time > 4:
+            self.sef_action("jump")
+        elif movement[0] != 0:
+            self.sef_action("run")
+        else:
+            self.sef_action("idle")
 
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size):
-        super().__init__(game, "enemy", pos, size)
+    def __init__(self, game, pos, size, anim_offset=(0, 0)):
+        super().__init__(game, "enemy", pos, size, anim_offset)
         self.HP = 100
         self.velocity[0] = 0.5
 

@@ -4,7 +4,7 @@ import sys
 
 from src.tilemap import Tilemap
 from src.entities import Player, Enemy
-from src.utils import load_image, load_images
+from src.utils import load_image, load_images, Animation
 from src.clouds import Clouds
 from src.bullet import Bullet
 
@@ -24,15 +24,19 @@ class Game:
             "stone": load_images(configs.assets["stone"]),
             "decor": load_images(configs.assets["decor"]),
             "large_decor": load_images(configs.assets["large_decor"]),
-            "player": load_image(configs.assets["player"]),
             "clouds": load_images(configs.assets["clouds"]),
-            "enemy": load_image(configs.assets["enemy"], configs.enemy_size),
-            "bullet": load_image(configs.assets["bullet"], scale=(7, 7))
+            "bullet": load_image(configs.assets["bullet"], configs.bullet_size, convert=True),
+            "player/idle": Animation(load_images("player/idle", convert=True), frame_rate=15),
+            "player/run": Animation(load_images("player/run", convert=True)),
+            "player/jump": Animation(load_images("player/jump", convert=True)),
+            "player/slide": Animation(load_images("player/slide", convert=True)),
+            "player/wall_slide": Animation(load_images("player/wall_slide", convert=True)),
+            "enemy/idle": Animation(load_images("enemy/idle", scale=configs.enemy_size)),
         }
 
         self.movement = [False, False]
         self.space_held = False
-        self.player = Player(self, configs.player_spawn_pos, configs.player_size)
+        self.player = Player(self, configs.player_spawn_pos, configs.player_size, configs.player_anim_offset)
         self.enemy = Enemy(self, configs.enemy_spawn_pos, configs.enemy_size)
         self.bullet = Bullet(self, configs.bullet_size)
 

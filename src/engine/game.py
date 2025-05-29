@@ -60,6 +60,8 @@ class Game:
         self.lose = False
         self.enemies_count = 1
         self.score = 0
+        self.show_enemy_health = False
+        self.health_dispaly_timer = 0
 
     def draw_health_hearts(self, surf, current_hp, max_hp, pos):
         heart_full = self.assets["heart_full"]
@@ -171,6 +173,8 @@ class Game:
                 if self.bullet.rect().colliderect(self.enemy.rect()):
                     self.bullet.reset()
                     self.enemy.HP -= self.configs.bullet_damage
+                    self.show_enemy_health = True
+                    self.health_dispaly_timer = 60
                     if self.enemy.HP <= 0:
                         self.score += 100
 
@@ -180,9 +184,16 @@ class Game:
                 else:
                     self.enemy.render(self.display, offset=self.scroll)
                     self.enemy.update(self.tilemap, (0, 0))
+
+                if self.show_enemy_health and self.health_dispaly_timer > 0:
                     health_bar_pos = (self.enemy.pos[0] - self.scroll[0] - 4, self.enemy.pos[1] - self.scroll[1] - 5)
                     self.draw_health_bar(self.display, self.enemy.HP, 100, health_bar_pos)
 
+                if self.health_dispaly_timer > 0:
+                    self.health_dispaly_timer -= 1
+                    if self.health_dispaly_timer <= 0:
+                        self.show_enemy_health = False
+                        
                 if self.player.pos[1] > self.configs.fall_limit_y:
                     self.lose = True  
 

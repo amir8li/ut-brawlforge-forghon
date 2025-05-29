@@ -4,19 +4,26 @@ import os
 BASE_IMG_PATH = "./src/assets/images/"
 
 def load_image(path, scale=None, convert=False):
-    img = pygame.image.load(BASE_IMG_PATH + path)
-    if convert:
-        img = img.convert()
-    img.set_colorkey((0, 0, 0))
-    if scale:
-        img = pygame.transform.scale(img, scale)
-    return img
-
+    try:
+        img = pygame.image.load(BASE_IMG_PATH + path)
+        if convert:
+            img = img.convert()
+        img.set_colorkey((0, 0, 0))
+        if scale:
+            img = pygame.transform.scale(img, scale)
+        return img
+    except:
+        return pygame.Surface((16, 16))
 
 def load_images(path, scale=None, convert=False):
     images = []
-    for filename in sorted(os.listdir(BASE_IMG_PATH + path)):
-        images.append(load_image(path + "/" + filename, scale, convert))
+    try:
+        for filename in sorted(os.listdir(BASE_IMG_PATH + path)):
+            images.append(load_image(path + "/" + filename, scale, convert))
+        if not images:
+            return [pygame.Surface((16, 16))]
+    except:
+        return [pygame.Surface((16, 16))]
     return images
 
 class Animation:

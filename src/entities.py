@@ -66,7 +66,6 @@ class PhysicsEntity:
     def render(self, surf, offset=(0, 0)):
         surf.blit(pygame.transform.flip(self.anim.get_current_image(), self.flip, False), (self.pos[0] - offset[0] + self.anim_offset[0], self.pos[1] - offset[1] + self.anim_offset[1]))
 
-
 class Player(PhysicsEntity):
     def __init__(self, game, pos, size, anim_offset=(0, 0)):
         super().__init__(game, "player", pos, size, anim_offset)
@@ -96,22 +95,49 @@ class Enemy(PhysicsEntity):
     def __init__(self, game, pos, size, anim_offset=(0, 0)):
         super().__init__(game, "enemy", pos, size, anim_offset)
         self.HP = 100
-        self.velocity[0] = 0.5
+        self.velocity[0] = 0.25
 
     def update(self, tilemap, movement=(0, 0)):
-        super().update(tilemap, movement)
+        frame_movement = (movement[0] + self.velocity[0], 0)
+        super().update(tilemap, frame_movement)
+        self.collisions = {"up": False, "down": False, "left": False, "right": False}
+
+        if frame_movement[0] != 0:
+            self.sef_action("run")
+        else:
+            self.sef_action("idle")
+
+        self.pos[0] += frame_movement[0]
+        entity_rect = self.rect()
+        for rect in tilemap.physics_rects_around(self.pos):
+            if entity_rect.colliderect(rect):
+                if frame_movement[0] > 0:
+                    entity_rect.right = rect.left
+                    self.collisions["right"] = True
+                if frame_movement[0] < 0:
+                    entity_rect.left = rect.right
+                    self.collisions["left"] = True
+                self.pos[0] = entity_rect.x
+
+        entity_rect = self.rect()
+        for rect in tilemap.physics_rects_around(self.pos):
+            if entity_rect.colliderect(rect):
+                if entity_rect.bottom > rect.top and entity_rect.bottom <= rect.top + 5:
+                    entity_rect.bottom = rect.top
+                    self.collisions["down"] = True
+                    self.pos[1] = entity_rect.y
+                if entity_rect.top < rect.bottom and entity_rect.top >= rect.bottom - 5:
+                    entity_rect.top = rect.bottom
+                    self.collisions["up"] = True
+                    self.pos[1] = entity_rect.y
+
         self.pos[0] += self.velocity[0]
         if self.pos[0] >= self.game.configs.right_x_boundary:
-            self.flip = True
-            self.velocity[0] *= - 1
+            self.velocity[0] *= -1
         elif self.pos[0] <= self.game.configs.left_x_boundary:
-            self.flip = False
-            self.velocity[0] *= - 1
+            self.velocity[0] *= -1
 
     def remove(self):
         self.pos = [-1000, -1000]
         self.velocity = [0, 0] 
-        self.HP = 0  
-
-            
-        
+        self.HP = 0

@@ -10,21 +10,27 @@ class Tilemap:
         self.tilemap = {}
         self.offgrid_tiles = []
 
-        for i in range(10):
+        for i in range(6):
             self.tilemap[str(3 + i) + ";10"] = {'type': 'grass', 'variant': 1, 'pos': (3 + i, 10)}
-        for i in range(9):
-            self.tilemap[str(3 + i) + ";11"] = {'type': 'dirt', 'variant': 1, 'pos': (3 + i, 11)}
-        for i in range(1):
-            self.tilemap["9;" + str(9 + i)] = {'type': 'stone', 'variant': 1, 'pos': (9, 9 + i)}
-        for i in range(3):
-            self.tilemap["10;" + str(7 + i)] = {'type': 'stone', 'variant': 1, 'pos': (10, 7 + i)}
-        for i in range(2):
-            self.tilemap["11;" + str(8 + i)] = {'type': 'stone', 'variant': 1, 'pos': (11, 8 + i)}
+        #for i in range(9):
+         #  self.tilemap[str(3 + i) + ";11"] = {'type': 'dirt', 'variant': 1, 'pos': (3 + i, 11)}
+        #for i in range(1):
+         #   self.tilemap["9;" + str(9 + i)] = {'type': 'stone', 'variant': 1, 'pos': (9, 9 + i)}
+        #for i in range(3):
+         #   self.tilemap["10;" + str(7 + i)] = {'type': 'stone', 'variant': 1, 'pos': (10, 7 + i)}
+        #for i in range(2):
+         #   self.tilemap["11;" + str(8 + i)] = {'type': 'stone', 'variant': 1, 'pos': (11, 8 + i)}
         
         self.tilemap["3;8"] = {'type': 'large_decor', 'variant': 2, 'pos': (3, 8)}
-
+        self.tilemap["13;6"] = {'type': 'stone', 'variant': 1, 'pos': (13, 6)}
+        self.tilemap["12;7"] = {'type': 'stone', 'variant': 1, 'pos': (12, 7)}
+        self.tilemap["9;10"] = {'type': 'stone', 'variant': 1, 'pos': (9, 10)}
+        self.tilemap["10;9"] = {'type': 'stone', 'variant': 1, 'pos': (10, 9)}
+        self.tilemap["11;8"] = {'type': 'stone', 'variant': 1, 'pos': (11, 8)}
         for i in range(10):
-            self.tilemap[str(-10+i)+";7"] = {'type': 'stone', 'variant': 1, 'pos': (-10+i, 7)}
+            self.tilemap[str(-10 + i)+";7"] = {'type': 'stone', 'variant': 1, 'pos': (-10 + i, 7)}
+        for i in range(5):
+            self.tilemap[str(14 + i) + ";5"] = {'type': 'stone', 'variant': 1, 'pos': (14 + i, 5)}
 
     def tiles_around(self, pos):
         tiles = []

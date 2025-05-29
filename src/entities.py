@@ -58,14 +58,11 @@ class PhysicsEntity:
             image = pygame.transform.flip(image, True, False)
         surf.blit(image, (self.pos[0] - offset[0], self.pos[1] - offset[1]))
 
-
 class Player(PhysicsEntity):
     def __init__(self, game, pos, size):
         super().__init__(game, "player", pos, size)
         self.jump_count = 0
-        self.HP = 100
-
-
+        self.HP = 10
 
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement)
@@ -77,24 +74,66 @@ class Player(PhysicsEntity):
 
 class Enemy(PhysicsEntity):
     def __init__(self, game, pos, size):
-        super().__init__(game, "enemy", pos, size)
+        super().__init__(game, "enemy_frames", pos, size)
         self.HP = 100
         self.velocity[0] = 0.5
+        self.animation_frames = self.game.assets["enemy_frames"]
+        self.current_frame = 0
+        self.animation_speed = 0.2
+        self.frame_count = len(self.animation_frames)
 
     def update(self, tilemap, movement=(0, 0)):
-        super().update(tilemap, movement)
+        self.collisions = {"up": False, "down": False, "left": False, "right": False}
+
+        if movement[0] > 0:
+            self.flip = False
+        elif movement[0] < 0:
+            self.flip = True
+
+        frame_movement = (movement[0] + self.velocity[0], 0)  # حرکت عمودی رو صفر کردیم
+
+        self.pos[0] += frame_movement[0]
+        entity_rect = self.rect()
+        for rect in tilemap.physics_rects_around(self.pos):
+            if entity_rect.colliderect(rect):
+                if frame_movement[0] > 0:
+                    entity_rect.right = rect.left
+                    self.collisions["right"] = True
+                if frame_movement[0] < 0:
+                    entity_rect.left = rect.right
+                    self.collisions["left"] = True
+                self.pos[0] = entity_rect.x
+
+        # بررسی برخورد عمودی برای نگه داشتن دشمن روی سکو
+        entity_rect = self.rect()
+        for rect in tilemap.physics_rects_around(self.pos):
+            if entity_rect.colliderect(rect):
+                if entity_rect.bottom > rect.top and entity_rect.bottom <= rect.top + 5:  # برخورد با سکو
+                    entity_rect.bottom = rect.top
+                    self.collisions["down"] = True
+                    self.pos[1] = entity_rect.y
+                if entity_rect.top < rect.bottom and entity_rect.top >= rect.bottom - 5:
+                    entity_rect.top = rect.bottom
+                    self.collisions["up"] = True
+                    self.pos[1] = entity_rect.y
+
         self.pos[0] += self.velocity[0]
         if self.pos[0] >= self.game.configs.right_x_boundary:
             self.flip = True
-            self.velocity[0] *= - 1
+            self.velocity[0] *= -1
         elif self.pos[0] <= self.game.configs.left_x_boundary:
             self.flip = False
-            self.velocity[0] *= - 1
+            self.velocity[0] *= -1
+
+        self.current_frame = (self.current_frame + self.animation_speed) % self.frame_count
+
+    def render(self, surf, offset=(0, 0)):
+        frame = self.animation_frames[int(self.current_frame)]
+        if self.flip:
+            frame = pygame.transform.flip(frame, True, False)
+        surf.blit(frame, (self.pos[0] - offset[0], self.pos[1] - offset[1]))
 
     def remove(self):
         self.pos = [-1000, -1000]
         self.velocity = [0, 0] 
-        self.HP = 0  
-
-            
-        
+        self.HP = 0

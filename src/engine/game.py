@@ -48,7 +48,7 @@ class Game:
         self.movement = [False, False]
         self.space_held = False
         self.player = Player(self, configs.player_spawn_pos, configs.player_size, configs.player_anim_offset)
-        self.player.HP = 10
+        self.player.HP = 100
 
         self.enemy = Enemy(self, configs.enemy_spawn_pos, configs.enemy_size, configs.enemy_anim_offset)
         self.bullet = Bullet(self, configs.bullet_size)
@@ -66,19 +66,19 @@ class Game:
         heart_half = self.assets["heart_half"]
         heart_empty = self.assets["heart_empty"]
 
-        max_hearts = max_hp // 2
+        max_hearts = max_hp // 20
         hp_left = current_hp
 
         spacing = 5
         for i in range(max_hearts):
             x = pos[0] + i * (heart_full.get_width() + spacing)
             y = pos[1]
-            if hp_left >= 2:
+            if hp_left >= 20:
                 surf.blit(heart_full, (x, y))
-                hp_left -= 2
-            elif hp_left == 1:
+                hp_left -= 20
+            elif hp_left == 10:
                 surf.blit(heart_half, (x, y))
-                hp_left -= 1
+                hp_left -= 10
             else:
                 surf.blit(heart_empty, (x, y))
 
@@ -137,7 +137,7 @@ class Game:
                         self.space_held = False
 
             if self.player.rect().colliderect(self.enemy.rect()):
-                self.player.HP -= 3
+                self.player.HP -= self.configs.enemy_damage_power
                 if self.player.HP <= 0:
                     self.player.HP = 0
                     self.lose = True
@@ -196,7 +196,7 @@ class Game:
                 gameover_rect = gameover_image.get_rect(center=(self.display.get_width() // 2, self.display.get_height() // 2))
                 self.display.blit(gameover_image, gameover_rect)
 
-            self.draw_health_hearts(self.display, self.player.HP, 10, (10, 10))
+            self.draw_health_hearts(self.display, self.player.HP, 100, (10, 10))
 
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
             pygame.display.update()

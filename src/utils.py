@@ -1,46 +1,32 @@
 import pygame
-import os
+from os import walk
+from os.path import join
 
-BASE_IMG_PATH = "./src/assets/images/"
+def import_image(*path, alpha = True, format = 'png'):
+	full_path = join(*path) + f'.{format}'
+	return pygame.image.load(full_path).convert_alpha() if alpha else pygame.image.load(full_path).convert()
 
-def load_image(path, scale=None, convert=False):
-    try:
-        img = pygame.image.load(BASE_IMG_PATH + path)
-        if convert:
-            img = img.convert()
-        img.set_colorkey((0, 0, 0))
-        if scale:
-            img = pygame.transform.scale(img, scale)
-        return img
-    except:
-        return pygame.Surface((16, 16))
+def import_folder(*path):
+	frames = []
+	for folder_path, subfolders, image_names in walk(join(*path)):
+		for image_name in sorted(image_names, key = lambda name: int(name.split('.')[0])):
+			full_path = join(folder_path, image_name)
+			frames.append(pygame.image.load(full_path).convert_alpha())
+	return frames 
 
-def load_images(path, scale=None, convert=False):
-    images = []
-    try:
-        for filename in sorted(os.listdir(BASE_IMG_PATH + path)):
-            images.append(load_image(path + "/" + filename, scale, convert))
-        if not images:
-            return [pygame.Surface((16, 16))]
-    except:
-        return [pygame.Surface((16, 16))]
-    return images
+def import_folder_dict(*path):
+	frame_dict = {}
+	for folder_path, _, image_names in walk(join(*path)):
+		for image_name in image_names:
+			full_path = join(folder_path, image_name)
+			surface = pygame.image.load(full_path).convert_alpha()
+			frame_dict[image_name.split('.')[0]] = surface
+	return frame_dict
 
-class Animation:
-    def __init__(self, images, frame_rate=10):
-        self.images = images
-        self.frame_rate = frame_rate
-        self.current_frame = 0
-        self.last_update = pygame.time.get_ticks()
-
-    def copy(self):
-        return Animation(self.images, self.frame_rate)
-
-    def update(self):
-        now = pygame.time.get_ticks()
-        if now - self.last_update > 1000 / self.frame_rate:
-            self.current_frame = (self.current_frame + 1) % len(self.images)
-            self.last_update = now
-
-    def get_current_image(self):
-        return self.images[self.current_frame]
+def import_sub_folders(*path):
+	frame_dict = {}
+	for _, sub_folders, __ in walk(join(*path)): 
+		if sub_folders:
+			for sub_folder in sub_folders:
+				frame_dict[sub_folder] = import_folder(*path, sub_folder)
+	return frame_dict

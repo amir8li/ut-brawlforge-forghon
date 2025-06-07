@@ -3,7 +3,7 @@ import pygame
 class Configs:
     def __init__(self):
         self.FPS = 60
-        self.screen_size = (1080, 720)
+        self.screen_size = (1280, 720)
         self.caption = "Forghoon"
         pygame.font.init()  
         self.game_over_font = pygame.font.SysFont('Arial', 64, 'bold')
@@ -28,7 +28,7 @@ class Configs:
         }
 
         # tiles settings
-        self.tile_size = 16
+        self.tile_size = 64
 
         # jump settings
         self.gravity = 0.2
@@ -43,16 +43,14 @@ class Configs:
         self.player_anim_offset = (-3, -3)
         self.fall_limit_y = 2000
 
-        #enemy settings
-        self.enemy_spawn_pos = (-40, 99)
-        self.enemy_size = (16, 16)
-        self.left_x_boundary = -168
-        self.right_x_boundary = -12
-        self.enemy_damage_power = 30
-        self.enemy_anim_offset = (0, 2)
-
-        # bullet settings
-        self.bullet_size = (8,8)
-        self.bullet_range = 300
-        self.bullet_damage = 25
-        self.bullet_angle_change = 10
+        # layers
+        self.z_layers = {
+            "bg": 0,
+            "clouds": 1,
+            "bg tiles": 2,
+            "path": 3,
+            "bg details": 4,
+            "main": 5,
+            "water": 6,
+            "fg": 7
+        }

@@ -103,3 +103,32 @@ class Spike(Sprite):
         x = self.center[0] + cos(radians(self.angle)) * self.radius
         y = self.center[1] + sin(radians(self.angle)) * self.radius
         self.rect.center = (x, y)
+
+class Bullet(Sprite):
+    def __init__(self, pos, surf, direction, speed, groups):
+        scaled_surf = pygame.transform.scale(surf, (surf.get_width() * 1.5, surf.get_height() * 1.5))
+        super().__init__(pos, scaled_surf, groups)
+        self.original_image = scaled_surf 
+        self.direction = direction
+        self.speed = speed
+        self.pos = vector(pos)  
+        self.rect.center = pos
+        self.angle = 0  
+        
+    def update(self, dt):
+        self.pos += self.direction * self.speed * dt
+        self.rect.center = self.pos
+        
+        self.angle = (self.angle + 500 * dt) % 360  
+        self.image = pygame.transform.rotate(self.original_image, self.angle)
+        self.rect = self.image.get_rect(center=self.rect.center) 
+        
+        for sprite in self.groups()[0].sprites():
+            if sprite != self and hasattr(sprite, 'collision_sprites') and sprite.collision_sprites:
+                if pygame.sprite.spritecollide(self, sprite.collision_sprites, False):
+                    self.kill()
+                    return
+        
+        world_pos = self.pos + vector(640 - self.rect.center[0], 360 - self.rect.center[1])
+        if world_pos.x < -100 or world_pos.x > 2000 or world_pos.y < -100 or world_pos.y > 2000:
+            self.kill()

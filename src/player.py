@@ -2,10 +2,12 @@ import pygame
 from pygame.math import Vector2 as vector
 
 from src.timer import Timer
+from src.sprites import Bullet
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, configs):
         super().__init__(groups)
+        self.all_sprites = groups
         self.frames = frames
         self.frame_index = 0
         self.state = "idle"
@@ -15,6 +17,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox_rect = self.rect.inflate(-76, -36)
         self.old_rect = self.hitbox_rect.copy()
+        self.configs = configs
 
         # movement
         self.direction = vector(0, 0)
@@ -23,6 +26,9 @@ class Player(pygame.sprite.Sprite):
         self.jump = False
         self.jump_height = -600
         self.attacking = False
+
+        # shooting
+        self.bullet_direction = vector()
 
         # cayote_time
         self.cayote_time = 0.1
@@ -38,7 +44,8 @@ class Player(pygame.sprite.Sprite):
             "wall_jump": Timer(500),
             "wall_slide": Timer(250),
             "platform_skip": Timer(100),
-            "attack_cooldown": Timer(500)
+            "attack_cooldown": Timer(500),
+            "shoot_cooldown": Timer(configs.bullet_cooldown * 1000)
         }
 
     def input(self):
@@ -55,9 +62,11 @@ class Player(pygame.sprite.Sprite):
             if keys[pygame.K_s]:
                 self.timers["platform_skip"].activate()
 
-            # left click
             if pygame.mouse.get_pressed()[0]:
                 self.attack()
+
+            if pygame.mouse.get_pressed()[2]:
+                self.shoot()
 
             self.direction.x = input_vector.normalize().x if input_vector else input_vector.x
 
@@ -69,6 +78,19 @@ class Player(pygame.sprite.Sprite):
             self.attacking = True
             self.frame_index = 0
             self.timers["attack_cooldown"].activate()
+
+    def shoot(self):
+        if not self.timers["shoot_cooldown"].active:  
+            spawn_pos = (self.rect.centerx, self.rect.centery)
+            
+            Bullet(
+                pos=spawn_pos,
+                surf=self.frames["bullet"][0],  
+                direction=vector(1, 0) if self.face_right else vector(-1, 0),  
+                speed=self.configs.bullet_speed,
+                groups=[self.all_sprites]
+            )
+            self.timers["shoot_cooldown"].activate()  
 
     def move(self, dt):
         self.hitbox_rect.x += self.direction.x * self.speed
@@ -185,4 +207,4 @@ class Player(pygame.sprite.Sprite):
         self.move(dt)
         self.check_contact()
         self.get_state()
-        self.animate(dt)
+        self.animate(dt) 

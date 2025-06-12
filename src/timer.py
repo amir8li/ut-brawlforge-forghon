@@ -6,7 +6,7 @@ class Timer:
         # self.func = func
         self.repeat = repeat
         self.start_time = 0
-        self.active = True
+        self.active = False  
 
     def activate(self):
         self.start_time = get_ticks()

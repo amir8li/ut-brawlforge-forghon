@@ -43,6 +43,11 @@ class Configs:
         self.player_anim_offset = (-3, -3)
         self.fall_limit_y = 2000
 
+        # bullet settings
+        self.bullet_speed = 700
+        self.bullet_cooldown = 0.5 
+        self.bullet_rotate = 500
+
         # layers
         self.z_layers = {
             "bg": 0,

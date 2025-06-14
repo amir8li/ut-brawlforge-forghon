@@ -15,8 +15,11 @@ class Game:
         pygame.display.set_caption(configs.caption)
 
         self.tmx_maps = {0: load_pygame("./data/levels/omni.tmx")}
-
-        self.current_stage = Level(self.tmx_maps[0], self.level_frames, configs)
+        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, configs)
+        
+        self.bg_sound = self.audio_files['bg']
+        self.bg_sound.set_volume(0.3)
+        self.bg_sound.play(-1)
 
     def import_assets(self):
         self.level_frames = {
@@ -39,6 +42,14 @@ class Game:
             "water_top": import_folder("graphics", "level", "water", "top"),
             "water_body": import_image("graphics", "level", "water", "body"),
             "items": import_sub_folders("graphics", "items"),
+        }
+        self.audio_files = {
+            'attack':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'attack.wav')),
+            'coin':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'coin.wav')),
+            'jump':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'jump.wav')),
+            'damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'damage.wav')),
+            'bullet':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bullet.wav')),
+            'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3'))
         }
     def run(self):
         running = True

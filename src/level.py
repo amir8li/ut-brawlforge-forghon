@@ -5,7 +5,7 @@ from src.groups import AllSprites
 from random import uniform
 
 class Level:
-    def __init__(self, tmx_map, level_frames, configs):
+    def __init__(self, tmx_map, level_frames, audio_files, configs):
         self.configs = configs
         self.display = pygame.display.get_surface()
         self.tmx_map = tmx_map
@@ -14,9 +14,13 @@ class Level:
         self.semi_collistion_sprites = pygame.sprite.Group()
         self.damage_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
-        self.setup(tmx_map, level_frames)
+        self.setup(tmx_map, level_frames, audio_files)
 
-    def setup(self, tmx_map, level_frames):
+        # audio
+        self.coin_sound = audio_files['coin']
+        self.coin_sound.set_volume(0.3)
+
+    def setup(self, tmx_map, level_frames, audio_files):
         # tiles
         for layer in ["BG", "Terrain", "FG", "Platforms"]:
             for x, y, surf in tmx_map.get_layer_by_name(layer).tiles():
@@ -42,7 +46,16 @@ class Level:
         for obj in tmx_map.get_layer_by_name("Objects"):
             if obj.name == "player":
                 player_pos = (obj.x, obj.y)
-                self.player = Player(player_pos, self.all_sprites, self.collision_sprites, self.semi_collistion_sprites, level_frames["player"], self.configs)
+                self.player = Player(
+                    pos=player_pos,
+                    groups=self.all_sprites,
+                    collision_sprites= self.collision_sprites,
+                    semi_collision_sprites= self.semi_collistion_sprites,
+                    frames=level_frames["player"],
+                    attack_sound=audio_files['attack'],
+                    jump_sound=audio_files['jump'],
+                    bullet_sound=audio_files['bullet'],
+                    configs=self.configs)
             else:
                 if obj.name in ("barrel", "crate"):
                     Sprite((obj.x, obj.y), obj.image, (self.all_sprites, self.collision_sprites))
@@ -135,7 +148,8 @@ class Level:
     def item_collision(self):
         if self.item_sprites:
             item_sprites = pygame.sprite.spritecollide(self.player, self.item_sprites, True)
-            # if item_sprites:
+            if item_sprites:
+                self.coin_sound.play()
                 
 
     def run(self, dt):

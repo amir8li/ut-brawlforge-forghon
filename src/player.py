@@ -5,7 +5,7 @@ from src.timer import Timer
 from src.sprites import Bullet
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, configs):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, attack_sound, jump_sound, bullet_sound, configs):
         super().__init__(groups)
         self.all_sprites = groups
         self.frames = frames
@@ -40,6 +40,7 @@ class Player(pygame.sprite.Sprite):
         self.on_surface = {'left': False, 'right': False, 'top': False, 'floor': False}
         self.platform = None
 
+        # timer
         self.timers = {
             "wall_jump": Timer(500),
             "wall_slide": Timer(250),
@@ -47,6 +48,15 @@ class Player(pygame.sprite.Sprite):
             "attack_cooldown": Timer(500),
             "shoot_cooldown": Timer(configs.bullet_cooldown * 1000)
         }
+
+        # audio
+        self.attack_sound = attack_sound
+        self.attack_sound.set_volume(0.3)
+        self.jump_sound = jump_sound
+        self.jump_sound.set_volume(0.3)
+        self.bullet_sound = bullet_sound
+        self.bullet_sound.set_volume(0.3)
+
 
     def input(self):
         keys = pygame.key.get_pressed()
@@ -78,6 +88,7 @@ class Player(pygame.sprite.Sprite):
             self.attacking = True
             self.frame_index = 0
             self.timers["attack_cooldown"].activate()
+            self.attack_sound.play()
 
     def shoot(self):
         if not self.timers["shoot_cooldown"].active:  
@@ -90,6 +101,7 @@ class Player(pygame.sprite.Sprite):
                 speed=self.configs.bullet_speed,
                 groups=[self.all_sprites]
             )
+            self.bullet_sound.play()
             self.timers["shoot_cooldown"].activate()  
 
     def move(self, dt):
@@ -109,10 +121,12 @@ class Player(pygame.sprite.Sprite):
                 self.direction.y = self.jump_height
                 self.timers["wall_slide"].activate()
                 self.hitbox_rect.bottom -= 1
+                self.jump_sound.play()
             elif any((self.on_surface['left'], self.on_surface['right'])) and not self.timers["wall_slide"].active:
                 self.timers["wall_jump"].activate()
                 self.direction.y = self.jump_height
                 self.direction.x = 0.5 if self.on_surface['left'] else -0.5
+                self.jump_sound.play()
             self.jump = False
 
         self.collision('vertical')

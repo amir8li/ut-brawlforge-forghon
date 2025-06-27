@@ -14,7 +14,8 @@ class Game:
         self.import_assets()
         pygame.display.set_caption(configs.caption)
 
-        self.data = Data()
+        self.ui = UI(self.font, self.ui_frames)
+        self.data = Data(self.ui)
         self.tmx_maps = {0: load_pygame("./data/levels/omni.tmx")}
 
         self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.data, configs)
@@ -42,6 +43,14 @@ class Game:
             "items": import_sub_folders("graphics", "items"),
             "particle": import_folder("graphics", "effects", "particle")
         }
+
+        self.ui_frames = {
+            "heart": import_folder("graphics", "ui", "heart"),
+            "coin": import_image("graphics", "ui", "coin"),
+        }
+
+        self.font = pygame.font.Font(join("graphics", "ui", "runescape_uf.ttf"), 40)
+
     def run(self):
         running = True
         while running:
@@ -54,4 +63,5 @@ class Game:
                     sys.exit()
 
             self.current_stage.run(dt)
+            self.ui.update(dt)
             pygame.display.flip()

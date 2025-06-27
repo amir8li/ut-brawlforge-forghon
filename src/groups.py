@@ -2,6 +2,7 @@ import pygame
 from pygame.math import Vector2 as vector
 from random import choice, randint
 
+from config import *
 from src.sprites import Sprite, Cloud
 from src.timer import Timer
 
@@ -10,16 +11,16 @@ class AllSprites(pygame.sprite.Group):
         super().__init__()
         self.display_surf = pygame.display.get_surface()
         self.offset = vector(0, 0)
-        self.width = width * 64
-        self.height = height * 64
+        self.width = width * TILE_SIZE
+        self.height = height * TILE_SIZE
         self.have_sky = not bg_tile
         self.horizon_line = horizon_line
 
         if bg_tile:
             for col in range(width):
                 for row in range(height):
-                    x = col * 64
-                    y = row * 64
+                    x = col * TILE_SIZE
+                    y = row * TILE_SIZE
                     Sprite((x, y), bg_tile, self, z=-1)
         else:
             self.large_cloud = clouds["large"]
@@ -46,7 +47,7 @@ class AllSprites(pygame.sprite.Group):
 
         sea_rect = pygame.Rect(0, horizon_pos, self.width, self.height - horizon_pos)
         pygame.draw.rect(self.display_surf, "#92a9ce", sea_rect)
-        pygame.draw.line(self.display_surf, "#f5f1de", (0, horizon_pos), (1280, horizon_pos), 2)
+        pygame.draw.line(self.display_surf, "#f5f1de", (0, horizon_pos), (SCREEN_SIZE[0], horizon_pos), 2)
 
     def draw_large_cloud(self, dt):
         self.large_cloud_x += self.cloud_direction * self.large_cloud_speed * dt
@@ -63,12 +64,12 @@ class AllSprites(pygame.sprite.Group):
         Cloud(pos, surf, self)
 
     def draw(self, target_pos, dt):
-        self.offset.x = -(target_pos[0] - 640)
-        self.offset.y = -(target_pos[1] - 360)
+        self.offset.x = -(target_pos[0] - SCREEN_SIZE[0] // 2)
+        self.offset.y = -(target_pos[1] - SCREEN_SIZE[1] // 2)
         
         # Clamp camera to level bounds
-        self.offset.x = max(-(self.width - 1280), min(0, self.offset.x))
-        self.offset.y = max(-(self.height - 720), min(0, self.offset.y))
+        self.offset.x = max(-(self.width - SCREEN_SIZE[0]), min(0, self.offset.x))
+        self.offset.y = max(-(self.height - SCREEN_SIZE[1]), min(0, self.offset.y))
 
         if self.have_sky:
             self.cloud_timer.update()

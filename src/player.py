@@ -2,6 +2,7 @@ import pygame
 from pygame.math import Vector2 as vector
 from math import sin
 
+from config import *
 from src.timer import Timer
 
 class Player(pygame.sprite.Sprite):
@@ -12,7 +13,7 @@ class Player(pygame.sprite.Sprite):
         self.state = "idle"
         self.face_right = True
         self.image = self.frames[self.state][self.frame_index]
-        self.z = 5
+        self.z = ZLAYERS["main"]
         self.data = data
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox_rect = self.rect.inflate(-76, -36)
@@ -20,15 +21,11 @@ class Player(pygame.sprite.Sprite):
 
         # movement
         self.direction = vector(0, 0)
-        self.speed = 5
-        self.gravity = 1300
+        self.speed = PLAYER_SPEED
+        self.gravity = GRAVITY
         self.jump = False
-        self.jump_height = -600
+        self.jump_height = JUMP_HEIGHT
         self.attacking = False
-
-        # cayote_time
-        self.cayote_time = 0.1
-        self.cayote_timer = 0
 
         # collision
         self.collision_sprites = collision_sprites

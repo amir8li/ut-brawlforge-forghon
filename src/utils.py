@@ -95,7 +95,6 @@ class Heart(AnimatedSprite):
 			if randint(0, 1000) == 1:
 				self.active = True
 
-
 # images importing functions
 def import_image(*path, alpha = True, format = 'png'):
 	full_path = join(*path) + f'.{format}'

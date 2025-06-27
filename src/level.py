@@ -1,13 +1,15 @@
 import pygame
+from pygame import Vector2 as vector
+from random import uniform
+
+from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite
 from src.player import Player
 from src.groups import AllSprites
 from src.enemies import Tooth
-from random import uniform
-from pygame import Vector2 as vector
 
 class Level:
-    def __init__(self, tmx_map, level_frames, data, configs):
+    def __init__(self, tmx_map, level_frames, data):
         self.data = data
 
         self.level_width = tmx_map.width * 64
@@ -17,8 +19,7 @@ class Level:
             bg_tile = level_frames["bg_tiles"][tmx_level_properties["bg"]]
         else:
             bg_tile=None
-       
-        self.configs = configs
+
         self.display = pygame.display.get_surface()
         self.tmx_map = tmx_map
         clouds_dict = {"large": level_frames["cloud_large"], "small": level_frames["cloud_small"]}
@@ -39,20 +40,20 @@ class Level:
                 if layer == "Terrain": groups.append(self.collision_sprites)
                 elif layer == "Platforms": groups.append(self.semi_collistion_sprites)
                 match layer:
-                    case "BG": z = self.configs.z_layers["bg tiles"]
-                    case "FG": z = self.configs.z_layers["fg"]
-                    case _: z = self.configs.z_layers["main"]
+                    case "BG": z = ZLAYERS["bg tiles"]
+                    case "FG": z = ZLAYERS["fg"]
+                    case _: z = ZLAYERS["main"]
 
-                Sprite((x*64, y*64), surf, groups, z)
+                Sprite((x*TILE_SIZE, y*TILE_SIZE), surf, groups, z)
 
         # bg details
         for obj in tmx_map.get_layer_by_name("BG details"):
             if obj.name == "static":
-                Sprite((obj.x, obj.y), obj.image, self.all_sprites, z = self.configs.z_layers["bg tiles"])
+                Sprite((obj.x, obj.y), obj.image, self.all_sprites, z = ZLAYERS["bg tiles"])
             else:
-                AnimatedSprite((obj.x, obj.y), level_frames[obj.name], self.all_sprites, self.configs.z_layers["bg tiles"])
+                AnimatedSprite((obj.x, obj.y), level_frames[obj.name], self.all_sprites, ZLAYERS["bg tiles"])
                 if obj.name == "candle":
-                    AnimatedSprite((obj.x, obj.y) + vector(-20, -20), level_frames["candle_light"], self.all_sprites, self.configs.z_layers["bg tiles"])
+                    AnimatedSprite((obj.x, obj.y) + vector(-20, -20), level_frames["candle_light"], self.all_sprites, ZLAYERS["bg tiles"])
 
         # objects
         for obj in tmx_map.get_layer_by_name("Objects"):
@@ -71,9 +72,9 @@ class Level:
                     if obj.name in ("palm_small", "palm_large"): groups.append(self.semi_collistion_sprites)
                     if obj.name in ("saw", "floor_spike"): groups.append(self.damage_sprites)
 
-                    z = self.configs.z_layers["main"] if not "bg" in obj.name else self.configs.z_layers["bg details"]
+                    z = ZLAYERS["main"] if not "bg" in obj.name else ZLAYERS["bg details"]
 
-                    anim_speed = 6 if not "palm" in obj.name else 6 + uniform(-1, 1)
+                    anim_speed = ANIMATION_SPEED if not "palm" in obj.name else 6 + uniform(-1, 1)
                     AnimatedSprite((obj.x, obj.y), frames, groups, z, anim_speed)
 
         # moving objects
@@ -97,7 +98,7 @@ class Level:
                         start_angle = obj.properties["start_angle"],
                         end_angle = obj.properties["end_angle"],
                         groups = self.all_sprites,
-                        z = self.configs.z_layers["bg details"],
+                        z = ZLAYERS["bg details"],
                     )
             else:
                 frames = level_frames[obj.name]
@@ -118,12 +119,12 @@ class Level:
                         y = start_pos[1] - level_frames["saw_chain"].get_height() // 2
                         left, right = int(start_pos[0]), int(end_pos[0])
                         for x in range(left, right, 20):
-                            Sprite((x, y), level_frames["saw_chain"], self.all_sprites, self.configs.z_layers["bg details"])
+                            Sprite((x, y), level_frames["saw_chain"], self.all_sprites, ZLAYERS["bg details"])
                     else:
                         x = start_pos[0] - level_frames["saw_chain"].get_width() // 2
                         top, bottom = int(start_pos[1]), int(end_pos[1])
                         for y in range(top, bottom, 20):
-                            Sprite((x, y), level_frames["saw_chain"], self.all_sprites, self.configs.z_layers["bg details"])
+                            Sprite((x, y), level_frames["saw_chain"], self.all_sprites, ZLAYERS["bg details"])
     
         # enemies
         for obj in tmx_map.get_layer_by_name("Enemies"):
@@ -143,9 +144,9 @@ class Level:
                         x = obj.x + col * 64
                         y = obj.y + row * 64
                         if row == 0:
-                            AnimatedSprite((x, y), level_frames["water_top"], self.all_sprites, self.configs.z_layers["water"])
+                            AnimatedSprite((x, y), level_frames["water_top"], self.all_sprites, ZLAYERS["water"])
                         else:
-                            Sprite((x, y), level_frames["water_body"], self.all_sprites, self.configs.z_layers["water"])
+                            Sprite((x, y), level_frames["water_body"], self.all_sprites, ZLAYERS["water"])
     
     def item_collision(self):
         if self.item_sprites:

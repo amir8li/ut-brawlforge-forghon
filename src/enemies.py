@@ -1,4 +1,6 @@
 import pygame
+
+from config import *
 from src.timer import Timer
 
 class Tooth(pygame.sprite.Sprite):
@@ -8,10 +10,10 @@ class Tooth(pygame.sprite.Sprite):
         self.frame_index = 0
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(topleft=pos)
-        self.z = 5
+        self.z = ZLAYERS["main"]
 
         self.direction = 1
-        self.speed = 200
+        self.speed = ENEMY_SPEED
         self.collision_rects = [sprite.rect for sprite in collision_sprites]
 
         self.hit_timer = Timer(350)

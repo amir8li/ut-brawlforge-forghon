@@ -2,23 +2,23 @@ import pygame
 import sys
 from pytmx.util_pygame import load_pygame
 
+from config import *
 from src.utils import *
 from src.level import Level
 
 class Game:
-    def __init__(self, configs):
+    def __init__(self):
         pygame.init()
-        self.configs = configs
         self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode((configs.screen_size[0], configs.screen_size[1]))
+        self.screen = pygame.display.set_mode(SCREEN_SIZE)
         self.import_assets()
-        pygame.display.set_caption(configs.caption)
+        pygame.display.set_caption(CAPTION)
 
         self.ui = UI(self.font, self.ui_frames)
         self.data = Data(self.ui)
         self.tmx_maps = {0: load_pygame("./data/levels/omni.tmx")}
 
-        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.data, configs)
+        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.data)
 
     def import_assets(self):
         self.level_frames = {
@@ -58,7 +58,7 @@ class Game:
         running = True
         while running:
             self.screen.fill("black")
-            dt = self.clock.tick(self.configs.FPS) / 1000
+            dt = self.clock.tick(FPS) / 1000
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False

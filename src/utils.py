@@ -2,6 +2,11 @@ import pygame
 from os import walk
 from os.path import join
 
+class Data:
+    def __init__(self):
+        self.coins = 0
+        self.health = 5
+
 def import_image(*path, alpha = True, format = 'png'):
 	full_path = join(*path) + f'.{format}'
 	return pygame.image.load(full_path).convert_alpha() if alpha else pygame.image.load(full_path).convert()

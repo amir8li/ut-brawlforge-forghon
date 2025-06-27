@@ -4,7 +4,6 @@ from pytmx.util_pygame import load_pygame
 
 from src.utils import *
 from src.level import Level
-from src.data import Data
 
 class Game:
     def __init__(self, configs):

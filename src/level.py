@@ -140,7 +140,16 @@ class Level:
             if item_sprites:
                 ParticleEffectSprite((item_sprites[0].rect.center), self.level_frames["particle"], self.all_sprites)
 
+    def attack_collision(self):
+        for target in self.tooth_sprites.sprites():
+            facing_target = (self.player.rect.centerx < target.rect.centerx and self.player.face_right) or \
+                            (self.player.rect.centerx > target.rect.centerx and not self.player.face_right)
+
+            if target.rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
+                target.reverse()
+
     def run(self, dt):
         self.all_sprites.update(dt)
         self.item_collision()
+        self.attack_collision()
         self.all_sprites.draw(self.player.hitbox_rect.center)

@@ -41,7 +41,8 @@ class Game:
             "water_top": import_folder("graphics", "level", "water", "top"),
             "water_body": import_image("graphics", "level", "water", "body"),
             "items": import_sub_folders("graphics", "items"),
-            "particle": import_folder("graphics", "effects", "particle")
+            "particle": import_folder("graphics", "effects", "particle"),
+            "bg_tiles": import_folder_dict("graphics", "level", "bg", "tiles"),
         }
 
         self.ui_frames = {

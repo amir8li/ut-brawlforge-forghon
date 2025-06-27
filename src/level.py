@@ -8,10 +8,19 @@ from random import uniform
 class Level:
     def __init__(self, tmx_map, level_frames, data, configs):
         self.data = data
+
+        self.level_width = tmx_map.width * 64
+        self.level_bottom = tmx_map.height * 64
+        tmx_level_properties = tmx_map.get_layer_by_name("Data")[0].properties
+        if tmx_level_properties["bg"]:
+            bg_tile = level_frames["bg_tiles"][tmx_level_properties["bg"]]
+        else:
+            bg_tile=None
+       
         self.configs = configs
         self.display = pygame.display.get_surface()
         self.tmx_map = tmx_map
-        self.all_sprites = AllSprites()
+        self.all_sprites = AllSprites(tmx_map.width, tmx_map.height, bg_tile)
         self.collision_sprites = pygame.sprite.Group()
         self.semi_collistion_sprites = pygame.sprite.Group()
         self.damage_sprites = pygame.sprite.Group()
@@ -32,7 +41,6 @@ class Level:
                     case "FG": z = self.configs.z_layers["fg"]
                     case _: z = self.configs.z_layers["main"]
 
-                z = self.configs.z_layers['bg tiles']
                 Sprite((x*64, y*64), surf, groups, z)
 
         # bg details
@@ -155,9 +163,25 @@ class Level:
             if target.rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
                 target.reverse()
 
+    def check_constraint(self):
+        # left & right borders
+        if self.player.hitbox_rect.left <= 0:
+            self.player.hitbox_rect.left = 0
+        elif self.player.hitbox_rect.right >= self.level_width:
+            self.player.hitbox_rect.right = self.level_width
+
+        # bottom border
+        if self.player.hitbox_rect.bottom >= self.level_bottom:
+            print("death")
+        
+        # success
+
     def run(self, dt):
         self.all_sprites.update(dt)
+
         self.item_collision()
         self.hit_collision()
         self.attack_collision()
+        self.check_constraint()
+
         self.all_sprites.draw(self.player.hitbox_rect.center)

@@ -4,6 +4,7 @@ from src.player import Player
 from src.groups import AllSprites
 from src.enemies import Tooth
 from random import uniform
+from pygame import Vector2 as vector
 
 class Level:
     def __init__(self, tmx_map, level_frames, data, configs):
@@ -50,6 +51,8 @@ class Level:
                 Sprite((obj.x, obj.y), obj.image, self.all_sprites, z = self.configs.z_layers["bg tiles"])
             else:
                 AnimatedSprite((obj.x, obj.y), level_frames[obj.name], self.all_sprites, self.configs.z_layers["bg tiles"])
+                if obj.name == "candle":
+                    AnimatedSprite((obj.x, obj.y) + vector(-20, -20), level_frames["candle_light"], self.all_sprites, self.configs.z_layers["bg tiles"])
 
         # objects
         for obj in tmx_map.get_layer_by_name("Objects"):

@@ -43,6 +43,8 @@ class Game:
             "items": import_sub_folders("graphics", "items"),
             "particle": import_folder("graphics", "effects", "particle"),
             "bg_tiles": import_folder_dict("graphics", "level", "bg", "tiles"),
+            "cloud_small": import_folder("graphics", "level", "clouds", "small"),
+            "cloud_large": import_image("graphics", "level", "clouds", "large_cloud"),
         }
 
         self.ui_frames = {

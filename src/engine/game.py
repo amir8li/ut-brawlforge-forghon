@@ -22,37 +22,37 @@ class Game:
 
     def import_assets(self):
         self.level_frames = {
-            "flag": import_folder("graphics", "level", "flag"),
-            "saw": import_folder("graphics", "enemies", "saw", "animation"),
-            "floor_spike": import_folder("graphics", "enemies", "floor_spikes"),
-            "candle": import_folder("graphics", "level", "candle"),
-            "window": import_folder("graphics", "level", "window"),
-            "big_chain": import_folder("graphics", "level", "big_chains"),
-            "small_chain": import_folder("graphics", "level", "small_chains"),
-            "candle_light": import_folder("graphics", "level", "candle light"),
-            "player": import_sub_folders("graphics", "player"),
-            "helicopter": import_folder("graphics", "level", "helicopter"),
-            "boat": import_folder("graphics", "objects", "boat"),
-            "saw_chain": import_image("graphics", "enemies", "saw", "saw_chain"),
-            "spike": import_image("graphics", "enemies", "spike_ball", "Spiked Ball"),
-            "spike_chain": import_image("graphics", "enemies", "spike_ball", "spiked_chain"),
-            "tooth": import_folder("graphics", "enemies", "tooth", "run"),
-            "palms": import_sub_folders("graphics", "level", "palms"),
-            "water_top": import_folder("graphics", "level", "water", "top"),
-            "water_body": import_image("graphics", "level", "water", "body"),
-            "items": import_sub_folders("graphics", "items"),
-            "particle": import_folder("graphics", "effects", "particle"),
-            "bg_tiles": import_folder_dict("graphics", "level", "bg", "tiles"),
-            "cloud_small": import_folder("graphics", "level", "clouds", "small"),
-            "cloud_large": import_image("graphics", "level", "clouds", "large_cloud"),
+            "flag": import_folder("src", "assets", "images", "level", "flag"),
+            "saw": import_folder("src", "assets", "images", "enemies", "saw", "animation"),
+            "floor_spike": import_folder("src", "assets", "images", "enemies", "floor_spikes"),
+            "candle": import_folder("src", "assets", "images", "level", "candle"),
+            "window": import_folder("src", "assets", "images", "level", "window"),
+            "big_chain": import_folder("src", "assets", "images", "level", "big_chains"),
+            "small_chain": import_folder("src", "assets", "images", "level", "small_chains"),
+            "candle_light": import_folder("src", "assets", "images", "level", "candle light"),
+            "player": import_sub_folders("src", "assets", "images", "player"),
+            "helicopter": import_folder("src", "assets", "images", "level", "helicopter"),
+            "boat": import_folder("src", "assets", "images", "objects", "boat"),
+            "saw_chain": import_image("src", "assets", "images", "enemies", "saw", "saw_chain"),
+            "spike": import_image("src", "assets", "images", "enemies", "spike_ball", "Spiked Ball"),
+            "spike_chain": import_image("src", "assets", "images", "enemies", "spike_ball", "spiked_chain"),
+            "tooth": import_folder("src", "assets", "images", "enemies", "tooth", "run"),
+            "palms": import_sub_folders("src", "assets", "images", "level", "palms"),
+            "water_top": import_folder("src", "assets", "images", "level", "water", "top"),
+            "water_body": import_image("src", "assets", "images", "level", "water", "body"),
+            "items": import_sub_folders("src", "assets", "images", "items"),
+            "particle": import_folder("src", "assets", "images", "effects", "particle"),
+            "bg_tiles": import_folder_dict("src", "assets", "images", "level", "bg", "tiles"),
+            "cloud_small": import_folder("src", "assets", "images", "level", "clouds", "small"),
+            "cloud_large": import_image("src", "assets", "images", "level", "clouds", "large_cloud"),
         }
 
         self.ui_frames = {
-            "heart": import_folder("graphics", "ui", "heart"),
-            "coin": import_image("graphics", "ui", "coin"),
+            "heart": import_folder("src", "assets", "images", "ui", "heart"),
+            "coin": import_image("src", "assets", "images", "ui", "coin"),
         }
 
-        self.font = pygame.font.Font(join("graphics", "ui", "runescape_uf.ttf"), 40)
+        self.font = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 40)
 
     def run(self):
         running = True

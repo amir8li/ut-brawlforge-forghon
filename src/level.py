@@ -1,5 +1,5 @@
 import pygame
-from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike
+from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite
 from src.player import Player
 from src.groups import AllSprites
 from src.enemies import Tooth
@@ -16,6 +16,7 @@ class Level:
         self.damage_sprites = pygame.sprite.Group()
         self.tooth_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
+        self.level_frames = level_frames
         self.setup(tmx_map, level_frames)
 
     def setup(self, tmx_map, level_frames):
@@ -136,8 +137,8 @@ class Level:
     def item_collision(self):
         if self.item_sprites:
             item_sprites = pygame.sprite.spritecollide(self.player, self.item_sprites, True)
-            # if item_sprites:
-                
+            if item_sprites:
+                ParticleEffectSprite((item_sprites[0].rect.center), self.level_frames["particle"], self.all_sprites)
 
     def run(self, dt):
         self.all_sprites.update(dt)

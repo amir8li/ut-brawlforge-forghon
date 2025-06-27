@@ -39,11 +39,12 @@ class Game:
             "water_top": import_folder("graphics", "level", "water", "top"),
             "water_body": import_image("graphics", "level", "water", "body"),
             "items": import_sub_folders("graphics", "items"),
+            "particle": import_folder("graphics", "effects", "particle")
         }
     def run(self):
         running = True
         while running:
-            self.screen.fill((255, 255, 255))
+            self.screen.fill("black")
             dt = self.clock.tick(self.configs.FPS) / 1000
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

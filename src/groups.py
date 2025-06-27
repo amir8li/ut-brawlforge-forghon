@@ -63,7 +63,6 @@ class AllSprites(pygame.sprite.Group):
         Cloud(pos, surf, self)
 
     def draw(self, target_pos, dt):
-        self.cloud_timer.update()
         self.offset.x = -(target_pos[0] - 640)
         self.offset.y = -(target_pos[1] - 360)
         
@@ -72,6 +71,7 @@ class AllSprites(pygame.sprite.Group):
         self.offset.y = max(-(self.height - 720), min(0, self.offset.y))
 
         if self.have_sky:
+            self.cloud_timer.update()
             self.draw_sky()
             self.draw_large_cloud(dt)
 

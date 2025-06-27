@@ -25,10 +25,23 @@ class AnimatedSprite(Sprite):
         self.animate(dt)
 
 class Item(AnimatedSprite):
-    def __init__(self, type, pos, frames, groups):
+    def __init__(self, type, pos, frames, groups, data):
         super().__init__(pos, frames, groups)
         self.rect.center = pos
         self.type = type
+        self.data = data
+    
+    def activate(self):
+        if self.type == "gold":
+            self.data.coins += 5
+        if self.type == "silver":
+            self.data.coins += 1
+        if self.type == "diamond":
+            self.data.coins += 20
+        if self.type == "skull":
+            self.data.coins += 50
+        if self.type == "potion":
+            self.data.health += 1
 
 class ParticleEffectSprite(AnimatedSprite):
     def __init__(self, pos, frames, groups=None):

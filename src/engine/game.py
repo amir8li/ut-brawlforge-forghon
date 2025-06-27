@@ -4,6 +4,7 @@ from pytmx.util_pygame import load_pygame
 
 from src.utils import *
 from src.level import Level
+from src.data import Data
 
 class Game:
     def __init__(self, configs):
@@ -14,9 +15,10 @@ class Game:
         self.import_assets()
         pygame.display.set_caption(configs.caption)
 
+        self.data = Data()
         self.tmx_maps = {0: load_pygame("./data/levels/omni.tmx")}
 
-        self.current_stage = Level(self.tmx_maps[0], self.level_frames, configs)
+        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.data, configs)
 
     def import_assets(self):
         self.level_frames = {

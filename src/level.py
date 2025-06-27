@@ -6,7 +6,8 @@ from src.enemies import Tooth
 from random import uniform
 
 class Level:
-    def __init__(self, tmx_map, level_frames, configs):
+    def __init__(self, tmx_map, level_frames, data, configs):
+        self.data = data
         self.configs = configs
         self.display = pygame.display.get_surface()
         self.tmx_map = tmx_map
@@ -45,7 +46,7 @@ class Level:
         for obj in tmx_map.get_layer_by_name("Objects"):
             if obj.name == "player":
                 player_pos = (obj.x, obj.y)
-                self.player = Player(player_pos, self.all_sprites, self.collision_sprites, self.semi_collistion_sprites, level_frames["player"])
+                self.player = Player(player_pos, self.all_sprites, self.collision_sprites, self.semi_collistion_sprites, level_frames["player"], self.data)
             else:
                 if obj.name in ("barrel", "crate"):
                     Sprite((obj.x, obj.y), obj.image, (self.all_sprites, self.collision_sprites))
@@ -119,7 +120,7 @@ class Level:
 
         # items
         for obj in tmx_map.get_layer_by_name("Items"):
-            Item(obj.name, (obj.x + 32, obj.y + 32), level_frames["items"][obj.name], (self.all_sprites, self.item_sprites))
+            Item(obj.name, (obj.x + 32, obj.y + 32), level_frames["items"][obj.name], (self.all_sprites, self.item_sprites), self.data)
 
         # water
         for obj in tmx_map.get_layer_by_name("Water"):
@@ -138,6 +139,7 @@ class Level:
         if self.item_sprites:
             item_sprites = pygame.sprite.spritecollide(self.player, self.item_sprites, True)
             if item_sprites:
+                item_sprites[0].activate()
                 ParticleEffectSprite((item_sprites[0].rect.center), self.level_frames["particle"], self.all_sprites)
 
     def hit_collision(self):

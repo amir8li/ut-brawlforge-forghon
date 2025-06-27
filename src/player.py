@@ -5,7 +5,7 @@ from math import sin
 from src.timer import Timer
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, data):
         super().__init__(groups)
         self.frames = frames
         self.frame_index = 0
@@ -13,6 +13,7 @@ class Player(pygame.sprite.Sprite):
         self.face_right = True
         self.image = self.frames[self.state][self.frame_index]
         self.z = 5
+        self.data = data
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox_rect = self.rect.inflate(-76, -36)
         self.old_rect = self.hitbox_rect.copy()
@@ -181,6 +182,7 @@ class Player(pygame.sprite.Sprite):
 
     def damage(self):
         if not self.timers["hit"].active:
+            self.data.health -= 1
             self.timers["hit"].activate()
             
     def flicker(self):

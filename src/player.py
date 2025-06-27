@@ -1,5 +1,6 @@
 import pygame
 from pygame.math import Vector2 as vector
+from math import sin
 
 from src.timer import Timer
 
@@ -38,7 +39,8 @@ class Player(pygame.sprite.Sprite):
             "wall_jump": Timer(500),
             "wall_slide": Timer(250),
             "platform_skip": Timer(100),
-            "attack_cooldown": Timer(500)
+            "attack_cooldown": Timer(500),
+            "hit": Timer(400),
         }
 
     def input(self):
@@ -176,7 +178,18 @@ class Player(pygame.sprite.Sprite):
                     self.state = "jump"
                 else:
                     self.state = "fall"
-           
+
+    def damage(self):
+        if not self.timers["hit"].active:
+            self.timers["hit"].activate()
+            
+    def flicker(self):
+        if self.timers["hit"].active and sin(pygame.time.get_ticks()*100) >= 0:
+            white_mask = pygame.mask.from_surface(self.image)
+            white_surface = white_mask.to_surface()
+            white_surface.set_colorkey((0, 0, 0))
+            self.image = white_surface
+
     def update(self, dt):
         self.old_rect = self.hitbox_rect.copy()
         self.update_timers()
@@ -186,3 +199,4 @@ class Player(pygame.sprite.Sprite):
         self.check_contact()
         self.get_state()
         self.animate(dt)
+        self.flicker()

@@ -1,9 +1,12 @@
 import pygame
 from pygame.math import Vector2 as vector
 from math import sin, cos, radians
+from random import randint
+
+from config import *
 
 class Sprite(pygame.sprite.Sprite):
-    def __init__(self, pos, surf, groups = None, z = 5):
+    def __init__(self, pos, surf, groups = None, z=ZLAYERS["main"]):
         super().__init__(groups)
         self.image = surf
         self.rect = self.image.get_rect(topleft=pos)
@@ -11,7 +14,7 @@ class Sprite(pygame.sprite.Sprite):
         self.z = z
 
 class AnimatedSprite(Sprite):
-    def __init__(self, pos, frames, groups=None, z=5, animation_speed=6):
+    def __init__(self, pos, frames, groups=None, z=ZLAYERS["main"], animation_speed=ANIMATION_SPEED):
         self.frames = frames
         self.frame_index = 0
         super().__init__(pos, self.frames[self.frame_index], groups, z)
@@ -25,10 +28,36 @@ class AnimatedSprite(Sprite):
         self.animate(dt)
 
 class Item(AnimatedSprite):
-    def __init__(self, type, pos, frames, groups):
+    def __init__(self, type, pos, frames, groups, data):
         super().__init__(pos, frames, groups)
         self.rect.center = pos
         self.type = type
+        self.data = data
+    
+    def activate(self):
+        if self.type == "gold":
+            self.data.coins += 5
+        if self.type == "silver":
+            self.data.coins += 1
+        if self.type == "diamond":
+            self.data.coins += 20
+        if self.type == "skull":
+            self.data.coins += 50
+        if self.type == "potion":
+            self.data.health += 1
+
+class ParticleEffectSprite(AnimatedSprite):
+    def __init__(self, pos, frames, groups=None):
+        super().__init__(pos, frames, groups)
+        self.rect.center = pos
+        self.z = ZLAYERS["fg"]
+    
+    def animate(self, dt):
+        self.frame_index += self.animation_speed * dt
+        if self.frame_index < len(self.frames):
+            self.image = self.frames[int(self.frame_index)]
+        else:
+            self.kill()
 
 class MovingSprite(AnimatedSprite):
     def __init__(self, frames, groups, start_pos, end_pos, speed, move_dir, flip=False):
@@ -76,7 +105,7 @@ class MovingSprite(AnimatedSprite):
             self.image = pygame.transform.flip(self.image, self.reverse['x'], self.reverse['y'])
 
 class Spike(Sprite):
-    def __init__(self, pos, surf, radius, speed, start_angle, end_angle, groups, z=5):
+    def __init__(self, pos, surf, radius, speed, start_angle, end_angle, groups, z=ZLAYERS["main"]):
         self.center = pos
         self.radius = radius
         self.speed = speed
@@ -103,3 +132,15 @@ class Spike(Sprite):
         x = self.center[0] + cos(radians(self.angle)) * self.radius
         y = self.center[1] + sin(radians(self.angle)) * self.radius
         self.rect.center = (x, y)
+
+class Cloud(Sprite):
+    def __init__(self, pos, surf, groups=None, z=ZLAYERS["clouds"]):
+        super().__init__(pos, surf, groups, z)
+        self.speed = randint(50, 120)
+        self.direction = -1
+        self.rect.midbottom = pos
+    
+    def update(self, dt):
+        self.rect.x += self.direction * self.speed * dt
+        if self.rect.right <= 0:
+            self.kill()

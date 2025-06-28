@@ -1,32 +1,31 @@
 import pygame
 from pygame.math import Vector2 as vector
+from math import sin
 
+from config import *
 from src.timer import Timer
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, data):
         super().__init__(groups)
         self.frames = frames
         self.frame_index = 0
         self.state = "idle"
         self.face_right = True
         self.image = self.frames[self.state][self.frame_index]
-        self.z = 5
+        self.z = ZLAYERS["main"]
+        self.data = data
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox_rect = self.rect.inflate(-76, -36)
         self.old_rect = self.hitbox_rect.copy()
 
         # movement
         self.direction = vector(0, 0)
-        self.speed = 5
-        self.gravity = 1300
+        self.speed = PLAYER_SPEED
+        self.gravity = GRAVITY
         self.jump = False
-        self.jump_height = -600
+        self.jump_height = JUMP_HEIGHT
         self.attacking = False
-
-        # cayote_time
-        self.cayote_time = 0.1
-        self.cayote_timer = 0
 
         # collision
         self.collision_sprites = collision_sprites
@@ -38,7 +37,8 @@ class Player(pygame.sprite.Sprite):
             "wall_jump": Timer(500),
             "wall_slide": Timer(250),
             "platform_skip": Timer(100),
-            "attack_cooldown": Timer(500)
+            "attack_cooldown": Timer(500),
+            "hit": Timer(400),
         }
 
     def input(self):
@@ -176,7 +176,19 @@ class Player(pygame.sprite.Sprite):
                     self.state = "jump"
                 else:
                     self.state = "fall"
-           
+
+    def damage(self):
+        if not self.timers["hit"].active:
+            self.data.health -= 1
+            self.timers["hit"].activate()
+            
+    def flicker(self):
+        if self.timers["hit"].active and sin(pygame.time.get_ticks()*100) >= 0:
+            white_mask = pygame.mask.from_surface(self.image)
+            white_surface = white_mask.to_surface()
+            white_surface.set_colorkey((0, 0, 0))
+            self.image = white_surface
+
     def update(self, dt):
         self.old_rect = self.hitbox_rect.copy()
         self.update_timers()
@@ -186,3 +198,4 @@ class Player(pygame.sprite.Sprite):
         self.check_contact()
         self.get_state()
         self.animate(dt)
+        self.flicker()

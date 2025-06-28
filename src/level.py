@@ -63,16 +63,15 @@ class Level:
         # objects
         for obj in tmx_map.get_layer_by_name("Objects"):
             if obj.name == "player":
-                player_pos = (obj.x, obj.y)
+                # dont understand the bug !!!
+                player_pos = (obj.x, obj.y - 400)
                 self.player = Player(
                     pos=player_pos,
                     groups=self.all_sprites,
                     collision_sprites= self.collision_sprites,
                     semi_collision_sprites= self.semi_collistion_sprites,
                     frames=level_frames["player"],
-                    attack_sound=audio_files['attack'],
-                    jump_sound=audio_files['jump'],
-                    bullet_sound=audio_files['bullet'],
+                    sounds = audio_files,
                     data = self.data)
             else:
                 if obj.name in ("barrel", "crate"):
@@ -207,3 +206,4 @@ class Level:
         self.check_constraint()
 
         self.all_sprites.draw(self.player.hitbox_rect.center, dt)
+        # self.player.draw_debug_hitbox(self.display)

@@ -7,7 +7,7 @@ from src.timer import Timer
 from src.sprites import Bullet
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, attack_sound, jump_sound, bullet_sound, data):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, sounds, data):
         super().__init__(groups)
         self.all_sprites = groups
         self.frames = frames
@@ -48,17 +48,20 @@ class Player(pygame.sprite.Sprite):
             "wall_slide": Timer(250),
             "platform_skip": Timer(100),
             "attack_cooldown": Timer(500),
-            "hit": Timer(400),
-            "shoot_cooldown": Timer(BULLET_COOLDOWN * 1000)
+            "hit": Timer(800),
+            "shoot_cooldown": Timer(BULLET_COOLDOWN * 1000),
         }
 
         # audio
-        self.attack_sound = attack_sound
+        self.attack_sound = sounds['attack']
         self.attack_sound.set_volume(0.3)
-        self.jump_sound = jump_sound
+        self.jump_sound = sounds['jump']
         self.jump_sound.set_volume(0.3)
-        self.bullet_sound = bullet_sound
+        self.bullet_sound = sounds['bullet']
         self.bullet_sound.set_volume(0.3)
+        self.damaged_sound = sounds['damage']
+        self.damaged_sound.set_volume(0.6)
+
 
 
     def input(self):
@@ -220,6 +223,8 @@ class Player(pygame.sprite.Sprite):
         if not self.timers["hit"].active:
             self.data.health -= 1
             self.timers["hit"].activate()
+            self.damaged_sound.play()
+
             
     def flicker(self):
         if self.timers["hit"].active and sin(pygame.time.get_ticks()*100) >= 0:
@@ -238,3 +243,11 @@ class Player(pygame.sprite.Sprite):
         self.get_state()
         self.animate(dt)
         self.flicker() 
+
+    # def draw_debug_hitbox(self, surface):
+    #     """Draw the hitbox and visual rect for debugging purposes"""
+    #     import pygame
+    #     # Draw the visual sprite rect in green
+    #     pygame.draw.rect(surface, (0, 255, 0), self.rect, 2)
+    #     # Draw the hitbox rect in red
+    #     pygame.draw.rect(surface, (255, 0, 0), self.hitbox_rect, 2) 

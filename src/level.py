@@ -9,7 +9,7 @@ from src.groups import AllSprites
 from src.enemies import Tooth
 
 class Level:
-    def __init__(self, tmx_map, level_frames, data):
+    def __init__(self, tmx_map, level_frames,audio_files, data):
         self.data = data
 
         self.level_width = tmx_map.width * 64
@@ -19,7 +19,6 @@ class Level:
             bg_tile = level_frames["bg_tiles"][tmx_level_properties["bg"]]
         else:
             bg_tile=None
-
         self.display = pygame.display.get_surface()
         self.tmx_map = tmx_map
         clouds_dict = {"large": level_frames["cloud_large"], "small": level_frames["cloud_small"]}
@@ -29,10 +28,16 @@ class Level:
         self.damage_sprites = pygame.sprite.Group()
         self.tooth_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
-        self.level_frames = level_frames
-        self.setup(tmx_map, level_frames)
 
-    def setup(self, tmx_map, level_frames):
+
+        self.level_frames = level_frames
+        self.setup(tmx_map, level_frames, audio_files)
+
+        # audio
+        self.coin_sound = audio_files['coin']
+        self.coin_sound.set_volume(0.3)
+
+    def setup(self, tmx_map, level_frames, audio_files):
         # tiles
         for layer in ["BG", "Terrain", "FG", "Platforms"]:
             for x, y, surf in tmx_map.get_layer_by_name(layer).tiles():
@@ -59,7 +64,16 @@ class Level:
         for obj in tmx_map.get_layer_by_name("Objects"):
             if obj.name == "player":
                 player_pos = (obj.x, obj.y)
-                self.player = Player(player_pos, self.all_sprites, self.collision_sprites, self.semi_collistion_sprites, level_frames["player"], self.data)
+                self.player = Player(
+                    pos=player_pos,
+                    groups=self.all_sprites,
+                    collision_sprites= self.collision_sprites,
+                    semi_collision_sprites= self.semi_collistion_sprites,
+                    frames=level_frames["player"],
+                    attack_sound=audio_files['attack'],
+                    jump_sound=audio_files['jump'],
+                    bullet_sound=audio_files['bullet'],
+                    data = self.data)
             else:
                 if obj.name in ("barrel", "crate"):
                     Sprite((obj.x, obj.y), obj.image, (self.all_sprites, self.collision_sprites))
@@ -154,6 +168,7 @@ class Level:
             if item_sprites:
                 item_sprites[0].activate()
                 ParticleEffectSprite((item_sprites[0].rect.center), self.level_frames["particle"], self.all_sprites)
+                self.coin_sound.play()
 
     def hit_collision(self):
         for sprite in self.damage_sprites.sprites():
@@ -180,6 +195,8 @@ class Level:
             print("death")
         
         # success
+                
+                
 
     def run(self, dt):
         self.all_sprites.update(dt)

@@ -7,6 +7,7 @@ class Timer:
 		self.start_time = 0
 		self.active = False
 		self.repeat = repeat
+		self.active = False
 
 	def activate(self):
 		self.active = True

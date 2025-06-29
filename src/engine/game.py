@@ -18,7 +18,11 @@ class Game:
         self.data = Data(self.ui)
         self.tmx_maps = {0: load_pygame("./data/levels/omni.tmx")}
 
-        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.data)
+        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data)
+        
+        self.bg_sound = self.audio_files['bg']
+        self.bg_sound.set_volume(0.3)
+        self.bg_sound.play(-1)
 
     def import_assets(self):
         self.level_frames = {
@@ -54,6 +58,14 @@ class Game:
 
         self.font = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 40)
 
+        self.audio_files = {
+            'attack':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'attack.wav')),
+            'coin':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'coin.wav')),
+            'jump':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'jump.wav')),
+            'damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'damage.wav')),
+            'bullet':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bullet.wav')),
+            'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3'))
+        }
     def run(self):
         running = True
         while running:

@@ -4,10 +4,12 @@ from math import sin
 
 from config import *
 from src.timer import Timer
+from src.sprites import Bullet
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, data):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, attack_sound, jump_sound, bullet_sound, data):
         super().__init__(groups)
+        self.all_sprites = groups
         self.frames = frames
         self.frame_index = 0
         self.state = "idle"
@@ -27,19 +29,37 @@ class Player(pygame.sprite.Sprite):
         self.jump_height = JUMP_HEIGHT
         self.attacking = False
 
+        # shooting
+        self.bullet_direction = vector()
+
+        # cayote_time
+        self.cayote_time = 0.1
+        self.cayote_timer = 0
+
         # collision
         self.collision_sprites = collision_sprites
         self.semi_collision_sprites = semi_collision_sprites
         self.on_surface = {'left': False, 'right': False, 'top': False, 'floor': False}
         self.platform = None
 
+        # timer
         self.timers = {
             "wall_jump": Timer(500),
             "wall_slide": Timer(250),
             "platform_skip": Timer(100),
             "attack_cooldown": Timer(500),
             "hit": Timer(400),
+            "shoot_cooldown": Timer(BULLET_COOLDOWN * 1000)
         }
+
+        # audio
+        self.attack_sound = attack_sound
+        self.attack_sound.set_volume(0.3)
+        self.jump_sound = jump_sound
+        self.jump_sound.set_volume(0.3)
+        self.bullet_sound = bullet_sound
+        self.bullet_sound.set_volume(0.3)
+
 
     def input(self):
         keys = pygame.key.get_pressed()
@@ -55,9 +75,11 @@ class Player(pygame.sprite.Sprite):
             if keys[pygame.K_s]:
                 self.timers["platform_skip"].activate()
 
-            # left click
             if pygame.mouse.get_pressed()[0]:
                 self.attack()
+
+            if pygame.mouse.get_pressed()[2]:
+                self.shoot()
 
             self.direction.x = input_vector.normalize().x if input_vector else input_vector.x
 
@@ -69,6 +91,21 @@ class Player(pygame.sprite.Sprite):
             self.attacking = True
             self.frame_index = 0
             self.timers["attack_cooldown"].activate()
+            self.attack_sound.play()
+
+    def shoot(self):
+        if not self.timers["shoot_cooldown"].active:  
+            spawn_pos = (self.rect.centerx, self.rect.centery)
+            
+            Bullet(
+                pos=spawn_pos,
+                surf=self.frames["bullet"][0],  
+                direction=vector(1, 0) if self.face_right else vector(-1, 0),  
+                speed=BULLET_SPEED,
+                groups=[self.all_sprites]
+            )
+            self.bullet_sound.play()
+            self.timers["shoot_cooldown"].activate()  
 
     def move(self, dt):
         self.hitbox_rect.x += self.direction.x * self.speed
@@ -87,10 +124,12 @@ class Player(pygame.sprite.Sprite):
                 self.direction.y = self.jump_height
                 self.timers["wall_slide"].activate()
                 self.hitbox_rect.bottom -= 1
+                self.jump_sound.play()
             elif any((self.on_surface['left'], self.on_surface['right'])) and not self.timers["wall_slide"].active:
                 self.timers["wall_jump"].activate()
                 self.direction.y = self.jump_height
                 self.direction.x = 0.5 if self.on_surface['left'] else -0.5
+                self.jump_sound.play()
             self.jump = False
 
         self.collision('vertical')
@@ -198,4 +237,4 @@ class Player(pygame.sprite.Sprite):
         self.check_contact()
         self.get_state()
         self.animate(dt)
-        self.flicker()
+        self.flicker() 

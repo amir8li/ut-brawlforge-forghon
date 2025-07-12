@@ -169,6 +169,13 @@ class Bullet(Sprite):
                 if pygame.sprite.spritecollide(self, sprite.collision_sprites, False):
                     self.kill()
                     return
+            
+         
+            if sprite != self and hasattr(sprite, 'take_damage') and sprite.state == "chasing":
+                if self.rect.colliderect(sprite.hitbox_rect):
+                    sprite.take_damage()
+                    self.kill()
+                    return
         
         world_pos = self.pos + vector(640 - self.rect.center[0], 360 - self.rect.center[1])
         if world_pos.x < -100 or world_pos.x > 2000 or world_pos.y < -100 or world_pos.y > 2000:

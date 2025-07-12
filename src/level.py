@@ -6,7 +6,7 @@ from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite
 from src.player import Player
 from src.groups import AllSprites
-from src.enemies import Tooth
+from src.enemies import Tooth, Bombastic
 
 class Level:
     def __init__(self, tmx_map, level_frames,audio_files, data):
@@ -27,6 +27,7 @@ class Level:
         self.semi_collistion_sprites = pygame.sprite.Group()
         self.damage_sprites = pygame.sprite.Group()
         self.tooth_sprites = pygame.sprite.Group()
+        self.bombastic_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
 
 
@@ -42,7 +43,8 @@ class Level:
         for layer in ["BG", "Terrain", "FG", "Platforms"]:
             for x, y, surf in tmx_map.get_layer_by_name(layer).tiles():
                 groups = [self.all_sprites]
-                if layer == "Terrain": groups.append(self.collision_sprites)
+                if layer == "Terrain": 
+                    groups.append(self.collision_sprites)
                 elif layer == "Platforms": groups.append(self.semi_collistion_sprites)
                 match layer:
                     case "BG": z = ZLAYERS["bg tiles"]
@@ -89,6 +91,13 @@ class Level:
 
                     anim_speed = ANIMATION_SPEED if not "palm" in obj.name else 6 + uniform(-1, 1)
                     AnimatedSprite((obj.x, obj.y), frames, groups, z, anim_speed)
+
+        # enemies
+        for obj in tmx_map.get_layer_by_name("Enemies"):
+            if obj.name == "tooth":
+                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites)
+            elif obj.name == "bombastic":
+                Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.player, audio_files)
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
@@ -138,11 +147,6 @@ class Level:
                         top, bottom = int(start_pos[1]), int(end_pos[1])
                         for y in range(top, bottom, 20):
                             Sprite((x, y), level_frames["saw_chain"], self.all_sprites, ZLAYERS["bg details"])
-    
-        # enemies
-        for obj in tmx_map.get_layer_by_name("Enemies"):
-            if obj.name == "tooth":
-                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites)        
 
         # items
         for obj in tmx_map.get_layer_by_name("Items"):
@@ -181,6 +185,14 @@ class Level:
 
             if target.rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
                 target.reverse()
+        
+
+        for target in self.bombastic_sprites.sprites():
+            facing_target = (self.player.rect.centerx < target.rect.centerx and self.player.face_right) or \
+                            (self.player.rect.centerx > target.rect.centerx and not self.player.face_right)
+
+            if target.hitbox_rect.colliderect(self.player.rect) and self.player.attacking and facing_target and target.state == "chasing":
+                target.take_damage()
 
     def check_constraint(self):
         # left & right borders

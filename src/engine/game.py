@@ -41,6 +41,9 @@ class Game:
             "spike": import_image("src", "assets", "images", "enemies", "spike_ball", "Spiked Ball"),
             "spike_chain": import_image("src", "assets", "images", "enemies", "spike_ball", "spiked_chain"),
             "tooth": import_folder("src", "assets", "images", "enemies", "tooth", "run"),
+            "bombastic": import_folder("src", "assets", "images", "enemies", "bombastic", "Moving"),
+            "bombastic_explosion": import_folder("src", "assets", "images", "enemies", "bombastic", "Explosion"),
+            "bombastic_dead": import_folder("src", "assets", "images", "enemies", "bombastic", "Dead"),
             "palms": import_sub_folders("src", "assets", "images", "level", "palms"),
             "water_top": import_folder("src", "assets", "images", "level", "water", "top"),
             "water_body": import_image("src", "assets", "images", "level", "water", "body"),
@@ -64,7 +67,10 @@ class Game:
             'jump':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'jump.wav')),
             'damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'damage.wav')),
             'bullet':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bullet.wav')),
-            'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3'))
+            'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3')),
+            'bombastic_explosion':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic explosion.wav')),
+            'bombastic_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic death.wav'))
+
         }
     def run(self):
         running = True

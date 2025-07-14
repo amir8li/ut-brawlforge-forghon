@@ -1,5 +1,5 @@
 import pygame
-
+from pygame import Vector2 as vector
 from config import *
 from src.timer import Timer
 
@@ -146,3 +146,109 @@ class Bombastic(pygame.sprite.Sprite):
             self.state = "dead"
             self.frame_index = 0
             self.dead_timer.activate()
+
+class Archer(pygame.sprite.Sprite):
+    def __init__(self, pos, frames, groups, collision_sprites, player, sounds, r=400, theta=60):
+        super().__init__(groups)
+        self.frames = frames  
+        self.state = "Walk"  # Walk, attack, hurt, die
+        self.frame_index = 0
+        self.image = self.frames["Walk"][self.frame_index] if "Walk" in self.frames else list(self.frames.values())[0][0]
+        self.rect = self.image.get_rect(topleft=pos)
+        self.z = ZLAYERS["main"]
+
+        self.direction = 1
+        self.speed = ENEMY_SPEED * 0.7
+        self.collision_rects = [sprite.rect for sprite in collision_sprites]
+        self.player = player
+        self.sounds = sounds
+        self.hitbox_rect = self.rect.inflate(-10, -10)
+
+        self.sight_radius = r
+        self.sight_angle = theta 
+        self.attack_cooldown = Timer(1200)
+        self.attack_duration = Timer(600)
+        self.attacking = False
+        self.dead = False
+        self.hurt = False
+        self.idle_timer = Timer(500)
+
+    def update(self, dt):
+        if self.dead:
+            self.animate(dt, "Die")
+            return
+        if self.hurt:
+            self.animate(dt, "Hurt")
+            return
+        if self.attacking:
+            self.attack_duration.update()
+            self.animate(dt, "Attack")
+            if not self.attack_duration.active:
+                self.attacking = False
+                self.attack_cooldown.activate()
+        elif self.can_see_player():
+            if not self.attack_cooldown.active:
+                self.start_attack()
+            else:
+                self.attack_cooldown.update()
+                self.animate(dt, "Idle")
+        else:
+            self.patrol(dt)
+
+        self.hitbox_rect.center = self.rect.center
+
+    def patrol(self, dt):
+        self.idle_timer.update()
+        self.frame_index += 6 * dt
+        self.image = self.frames["Walk"][int(self.frame_index) % len(self.frames["Walk"])]
+        if self.direction < 0:
+            self.image = pygame.transform.flip(self.image, True, False)
+        self.rect.x += self.direction * self.speed * dt
+        floor_rect_right = pygame.Rect(self.rect.bottomright, (1, 1))
+        floor_rect_left = pygame.Rect(self.rect.bottomleft, (-1, 1))
+        rect_right = pygame.Rect(self.rect.bottomright, (1, -1))
+        rect_left = pygame.Rect(self.rect.bottomleft, (-1, -1))
+        if floor_rect_right.collidelist(self.collision_rects) < 0 and self.direction > 0:
+            self.direction = -1
+        elif floor_rect_left.collidelist(self.collision_rects) < 0 and self.direction < 0:
+            self.direction = 1
+        elif rect_right.collidelist(self.collision_rects) > 0 and self.direction > 0:
+            self.direction = -1
+        elif rect_left.collidelist(self.collision_rects) > 0 and self.direction < 0:
+            self.direction = 1
+
+    def can_see_player(self):
+        archer_center = vector(self.rect.center)
+        player_center = vector(self.player.rect.center)
+        to_player = player_center - archer_center
+        distance = to_player.length()
+        if distance > self.sight_radius:
+            return False
+        facing = vector(self.direction, 0)
+        if distance == 0:
+            return False
+        angle = facing.angle_to(to_player)
+        return abs(angle) < self.sight_angle / 2 and (self.direction > 0) == (to_player.x > 0)
+
+    def start_attack(self):
+        self.attacking = True
+        self.attack_duration.activate()
+        self.frame_index = 0
+        # if self.sounds.get("archer_attack"):
+        #     self.sounds["archer_attack"].play()
+
+    def animate(self, dt, state):
+        if state not in self.frames:
+            state = list(self.frames.keys())[0]
+        self.frame_index += 6 * dt
+        self.image = self.frames[state][int(self.frame_index) % len(self.frames[state])]
+        if self.direction < 0:
+            self.image = pygame.transform.flip(self.image, True, False)
+
+    def take_damage(self):
+        if not self.dead:
+            self.hurt = True
+            self.frame_index = 0
+            self.dead = True  
+            # if self.sounds.get("archer_die"):
+            #     self.sounds["archer_die"].play()

@@ -52,6 +52,7 @@ class Game:
             "bg_tiles": import_folder_dict("src", "assets", "images", "level", "bg", "tiles"),
             "cloud_small": import_folder("src", "assets", "images", "level", "clouds", "small"),
             "cloud_large": import_image("src", "assets", "images", "level", "clouds", "large_cloud"),
+            "archer": import_sub_folders("src", "assets", "images", "enemies", "archer"),
         }
 
         self.ui_frames = {

@@ -6,7 +6,7 @@ from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite
 from src.player import Player
 from src.groups import AllSprites
-from src.enemies import Tooth, Bombastic
+from src.enemies import Tooth, Bombastic, Archer
 
 class Level:
     def __init__(self, tmx_map, level_frames,audio_files, data):
@@ -65,10 +65,8 @@ class Level:
         # objects
         for obj in tmx_map.get_layer_by_name("Objects"):
             if obj.name == "player":
-                # dont understand the bug !!!
-                player_pos = (obj.x, obj.y - 400)
                 self.player = Player(
-                    pos=player_pos,
+                    pos=(obj.x, obj.y),
                     groups=self.all_sprites,
                     collision_sprites= self.collision_sprites,
                     semi_collision_sprites= self.semi_collistion_sprites,
@@ -98,6 +96,8 @@ class Level:
                 Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites)
             elif obj.name == "bombastic":
                 Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.player, audio_files)
+            elif obj.name == "archer":
+                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites), self.collision_sprites, self.player, audio_files)
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
@@ -211,7 +211,6 @@ class Level:
 
     def run(self, dt):
         self.all_sprites.update(dt)
-
         self.item_collision()
         self.hit_collision()
         self.attack_collision()

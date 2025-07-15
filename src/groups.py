@@ -40,7 +40,7 @@ class AllSprites(pygame.sprite.Group):
                 pos = (randint(0, self.width), randint(0, self.horizon_line))
                 surf = choice(self.small_clouds)
                 Cloud(pos, surf, self)
-                    
+
     def draw_sky(self):
         self.display_surf.fill("#ddc6a1")
         horizon_pos = self.horizon_line + self.offset.y
@@ -66,7 +66,7 @@ class AllSprites(pygame.sprite.Group):
     def draw(self, target_pos, dt):
         self.offset.x = -(target_pos[0] - SCREEN_SIZE[0] // 2)
         self.offset.y = -(target_pos[1] - SCREEN_SIZE[1] // 2)
-        
+
         # Clamp camera to level bounds
         self.offset.x = max(-(self.width - SCREEN_SIZE[0]), min(0, self.offset.x))
         self.offset.y = max(-(self.height - SCREEN_SIZE[1]), min(0, self.offset.y))
@@ -76,6 +76,9 @@ class AllSprites(pygame.sprite.Group):
             self.draw_sky()
             self.draw_large_cloud(dt)
 
-        for sprite in sorted(self, key = lambda sprite: sprite.z):
+        for sprite in sorted(self, key=lambda sprite: sprite.z):
             offset_pos = sprite.rect.topleft + self.offset
             self.display_surf.blit(sprite.image, offset_pos)
+
+    def custom_draw(self, player):
+        self.draw(player.rect.center, 1/60) 

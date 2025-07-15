@@ -7,24 +7,33 @@ from src.utils import *
 from src.level import Level
 
 class Game:
-    def __init__(self):
+    def __init__(self, mode=None, selected_map=None, selected_hero=None, player_names=None):
         pygame.init()
+        self.mode = mode
+        self.selected_map = selected_map
+        self.selected_hero = selected_hero
+        self.player_names = player_names
+
         self.clock = pygame.time.Clock()
         self.screen = pygame.display.set_mode(SCREEN_SIZE)
-        self.import_assets()
         pygame.display.set_caption(CAPTION)
+
+        self.import_assets()
 
         self.ui = UI(self.font, self.ui_frames)
         self.data = Data(self.ui)
-        self.tmx_maps = {0: load_pygame("./data/levels/omni.tmx")}
+        self.data.name = self.selected_hero  # ← این خط مهمه
 
+        self.tmx_maps = {0: load_pygame(join("data", "levels", self.selected_map))}
         self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data)
-        
+
         self.bg_sound = self.audio_files['bg']
         self.bg_sound.set_volume(0.3)
         self.bg_sound.play(-1)
 
     def import_assets(self):
+        self.player_frames = import_character_frames("src", "assets", "images", "players", self.selected_hero)
+
         self.level_frames = {
             "flag": import_folder("src", "assets", "images", "level", "flag"),
             "saw": import_folder("src", "assets", "images", "enemies", "saw", "animation"),
@@ -34,7 +43,7 @@ class Game:
             "big_chain": import_folder("src", "assets", "images", "level", "big_chains"),
             "small_chain": import_folder("src", "assets", "images", "level", "small_chains"),
             "candle_light": import_folder("src", "assets", "images", "level", "candle light"),
-            "player": import_sub_folders("src", "assets", "images", "player"),
+            "player": self.player_frames,
             "helicopter": import_folder("src", "assets", "images", "level", "helicopter"),
             "boat": import_folder("src", "assets", "images", "objects", "boat"),
             "saw_chain": import_image("src", "assets", "images", "enemies", "saw", "saw_chain"),
@@ -59,17 +68,17 @@ class Game:
         self.font = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 40)
 
         self.audio_files = {
-            'attack':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'attack.wav')),
-            'coin':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'coin.wav')),
-            'jump':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'jump.wav')),
-            'damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'damage.wav')),
-            'bullet':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bullet.wav')),
-            'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3'))
+            'attack': pygame.mixer.Sound(join('src', 'assets', 'sounds', 'attack.wav')),
+            'coin': pygame.mixer.Sound(join('src', 'assets', 'sounds', 'coin.wav')),
+            'jump': pygame.mixer.Sound(join('src', 'assets', 'sounds', 'jump.wav')),
+            'damage': pygame.mixer.Sound(join('src', 'assets', 'sounds', 'damage.wav')),
+            'bullet': pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bullet.wav')),
+            'bg': pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3'))
         }
+
     def run(self):
         running = True
         while running:
-            self.screen.fill("black")
             dt = self.clock.tick(FPS) / 1000
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -77,6 +86,13 @@ class Game:
                     pygame.quit()
                     sys.exit()
 
-            self.current_stage.run(dt)
+            self.current_stage.update(dt)
+            self.screen.fill("#91a7d0")
+            self.current_stage.draw(self.screen)
             self.ui.update(dt)
             pygame.display.flip()
+
+            result = self.current_stage.check_constraint()
+            if result in ["win", "gameover"]:
+                self.bg_sound.stop()
+                return result

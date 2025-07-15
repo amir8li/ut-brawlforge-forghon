@@ -25,3 +25,5 @@ ZLAYERS = {
     "water": 6,
     "fg": 7
 }
+single_maps = ["0.tmx", "2.tmx", "5.tmx", "6.tmx"]
+multi_maps = ["1.tmx", "3.tmx", "4.tmx", "7.tmx"]

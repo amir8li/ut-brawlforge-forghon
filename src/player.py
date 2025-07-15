@@ -14,35 +14,39 @@ class Player(pygame.sprite.Sprite):
         self.frame_index = 0
         self.state = "idle"
         self.face_right = True
-        self.image = self.frames[self.state][self.frame_index]
-        self.z = ZLAYERS["main"]
         self.data = data
-        self.rect = self.image.get_rect(topleft=pos)
+
+        if self.data.name == "player2":
+            for key in self.frames:
+                self.frames[key] = [pygame.transform.smoothscale(img, (img.get_width()*2, img.get_height()*2)) for img in self.frames[key]]
+        self.image = self.frames[self.state][self.frame_index]
+
+        self.z = ZLAYERS["main"]
+
+        adjusted_pos = list(pos)
+        if self.data.name == "player3":
+            adjusted_pos[1] += 30
+
+        self.rect = self.image.get_rect(topleft=adjusted_pos)
         self.hitbox_rect = self.rect.inflate(-76, -36)
         self.old_rect = self.hitbox_rect.copy()
 
-        # movement
         self.direction = vector(0, 0)
         self.speed = PLAYER_SPEED
         self.gravity = GRAVITY
         self.jump = False
         self.jump_height = JUMP_HEIGHT
         self.attacking = False
-
-        # shooting
         self.bullet_direction = vector()
 
-        # cayote_time
         self.cayote_time = 0.1
         self.cayote_timer = 0
 
-        # collision
         self.collision_sprites = collision_sprites
         self.semi_collision_sprites = semi_collision_sprites
         self.on_surface = {'left': False, 'right': False, 'top': False, 'floor': False}
         self.platform = None
 
-        # timer
         self.timers = {
             "wall_jump": Timer(500),
             "wall_slide": Timer(250),
@@ -52,14 +56,12 @@ class Player(pygame.sprite.Sprite):
             "shoot_cooldown": Timer(BULLET_COOLDOWN * 1000)
         }
 
-        # audio
         self.attack_sound = attack_sound
         self.attack_sound.set_volume(0.3)
         self.jump_sound = jump_sound
         self.jump_sound.set_volume(0.3)
         self.bullet_sound = bullet_sound
         self.bullet_sound.set_volume(0.3)
-
 
     def input(self):
         keys = pygame.key.get_pressed()

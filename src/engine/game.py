@@ -70,8 +70,9 @@ class Game:
             'bullet':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bullet.wav')),
             'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3')),
             'bombastic_explosion':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic explosion.wav')),
-            'bombastic_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic death.wav'))
-
+            'bombastic_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic death.wav')),
+            'archer_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'archer death.mp3')),
+            'archer_damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'archer damage.wav'))
         }
     def run(self):
         running = True

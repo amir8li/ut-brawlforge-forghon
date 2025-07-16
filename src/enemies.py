@@ -1,7 +1,15 @@
 import pygame
 from pygame import Vector2 as vector
+from src.sprites import Bullet
 from config import *
 from src.timer import Timer
+
+
+def is_line_blocked(start, end, rects):
+    for rect in rects:
+        if rect.clipline(start, end):
+            return True
+    return False
 
 class Tooth(pygame.sprite.Sprite):
     def __init__(self, pos, frames, groups, collision_sprites):
@@ -150,105 +158,149 @@ class Bombastic(pygame.sprite.Sprite):
 class Archer(pygame.sprite.Sprite):
     def __init__(self, pos, frames, groups, collision_sprites, player, sounds, r=400, theta=60):
         super().__init__(groups)
-        self.frames = frames  
-        self.state = "Walk"  # Walk, attack, hurt, die
+        
+        # Animation setup
+        self.frames = frames
+        self.state = "Walk"
         self.frame_index = 0
-        self.image = self.frames["Walk"][self.frame_index] if "Walk" in self.frames else list(self.frames.values())[0][0]
+        self.image = self.frames["Walk"][0] if "Walk" in self.frames else list(self.frames.values())[0][0]
         self.rect = self.image.get_rect(topleft=pos)
         self.z = ZLAYERS["main"]
 
+        # Movement and collision
         self.direction = 1
-        self.speed = ENEMY_SPEED * 0.7
-        self.collision_rects = [sprite.rect for sprite in collision_sprites]
+        self.facing_right = True
+        self.speed = ENEMY_SPEED * 0.4
+        self.collision_sprites = collision_sprites
+        self.hitbox_rect = self.rect.inflate(-10, -10)
+        self.pos = vector(self.rect.topleft)
+
+        # Sight and combat
         self.player = player
         self.sounds = sounds
-        self.hitbox_rect = self.rect.inflate(-10, -10)
-
         self.sight_radius = r
-        self.sight_angle = theta 
+        self.sight_angle = theta
         self.attack_cooldown = Timer(1200)
         self.attack_duration = Timer(600)
+        # State flags
         self.attacking = False
         self.dead = False
         self.hurt = False
-        self.idle_timer = Timer(500)
+        self.health = 3  
 
     def update(self, dt):
+        self.facing_right = self.direction > 0
         if self.dead:
-            self.animate(dt, "Die")
-            return
-        if self.hurt:
-            self.animate(dt, "Hurt")
-            return
-        if self.attacking:
+            finished = self.animate(dt, "Die")
+            if finished:
+                self.kill()
+        elif self.hurt:
+            finished = self.animate(dt, "Hurt")
+            if finished:
+                self.hurt = False
+        elif self.attacking:
             self.attack_duration.update()
             self.animate(dt, "Attack")
             if not self.attack_duration.active:
                 self.attacking = False
                 self.attack_cooldown.activate()
+                self.shoot_arrow()
         elif self.can_see_player():
             if not self.attack_cooldown.active:
                 self.start_attack()
             else:
                 self.attack_cooldown.update()
-                self.animate(dt, "Idle")
         else:
             self.patrol(dt)
 
         self.hitbox_rect.center = self.rect.center
 
     def patrol(self, dt):
-        self.idle_timer.update()
-        self.frame_index += 6 * dt
-        self.image = self.frames["Walk"][int(self.frame_index) % len(self.frames["Walk"])]
-        if self.direction < 0:
-            self.image = pygame.transform.flip(self.image, True, False)
-        self.rect.x += self.direction * self.speed * dt
-        floor_rect_right = pygame.Rect(self.rect.bottomright, (1, 1))
-        floor_rect_left = pygame.Rect(self.rect.bottomleft, (-1, 1))
-        rect_right = pygame.Rect(self.rect.bottomright, (1, -1))
-        rect_left = pygame.Rect(self.rect.bottomleft, (-1, -1))
-        if floor_rect_right.collidelist(self.collision_rects) < 0 and self.direction > 0:
+        self.animate(dt, "Walk")
+        self.pos.x += self.direction * self.speed * dt
+        self.rect.x = round(self.pos.x)
+
+        next_feet = self.rect.bottomright if self.direction > 0 else self.rect.bottomleft
+        ground_check = pygame.Rect(next_feet, (1, 2))
+        wall_check_right = pygame.Rect(self.rect.midright, (2, -2))
+        wall_check_left = pygame.Rect(self.rect.midleft, (-2, -2))
+
+        collision_rects = [sprite.rect for sprite in self.collision_sprites]
+
+        if ground_check.collidelist(collision_rects) < 0:
+            self.direction *= -1
+
+        if wall_check_right.collidelist(collision_rects) > 0 and self.direction > 0:
             self.direction = -1
-        elif floor_rect_left.collidelist(self.collision_rects) < 0 and self.direction < 0:
-            self.direction = 1
-        elif rect_right.collidelist(self.collision_rects) > 0 and self.direction > 0:
-            self.direction = -1
-        elif rect_left.collidelist(self.collision_rects) > 0 and self.direction < 0:
+        elif wall_check_left.collidelist(collision_rects) > 0 and self.direction < 0:
             self.direction = 1
 
     def can_see_player(self):
         archer_center = vector(self.rect.center)
         player_center = vector(self.player.rect.center)
         to_player = player_center - archer_center
-        distance = to_player.length()
-        if distance > self.sight_radius:
+
+        if to_player.length() > self.sight_radius or to_player.length() == 0:
             return False
+
         facing = vector(self.direction, 0)
-        if distance == 0:
+        up = vector(0, -1)
+        angle_facing = abs(facing.angle_to(to_player))
+        angle_up = abs(up.angle_to(to_player))
+
+        collision_rects = [sprite.rect for sprite in self.collision_sprites]
+        if is_line_blocked(archer_center, player_center, collision_rects):
             return False
-        angle = facing.angle_to(to_player)
-        return abs(angle) < self.sight_angle / 2 and (self.direction > 0) == (to_player.x > 0)
+        
+        return (angle_facing < self.sight_angle / 2) or (angle_up < self.sight_angle / 2)
 
     def start_attack(self):
         self.attacking = True
         self.attack_duration.activate()
         self.frame_index = 0
-        # if self.sounds.get("archer_attack"):
-        #     self.sounds["archer_attack"].play()
 
     def animate(self, dt, state):
-        if state not in self.frames:
-            state = list(self.frames.keys())[0]
-        self.frame_index += 6 * dt
-        self.image = self.frames[state][int(self.frame_index) % len(self.frames[state])]
-        if self.direction < 0:
-            self.image = pygame.transform.flip(self.image, True, False)
+        self.frame_index += 10 * dt
+        old_midbottom = self.rect.midbottom
+
+        frames = self.frames[state]
+        frame_count = len(frames)
+        frame = frames[int(self.frame_index) % frame_count]
+        if not self.facing_right:
+            frame = pygame.transform.flip(frame, True, False)
+
+        self.image = frame
+        self.rect = self.image.get_rect()
+        self.rect.midbottom = old_midbottom
+
+        return self.frame_index >= frame_count
 
     def take_damage(self):
         if not self.dead:
-            self.hurt = True
-            self.frame_index = 0
-            self.dead = True  
-            # if self.sounds.get("archer_die"):
-            #     self.sounds["archer_die"].play()
+            player_x = self.player.rect.centerx
+            archer_x = self.rect.centerx
+            if (self.direction > 0 and player_x < archer_x) or (self.direction < 0 and player_x > archer_x):
+                self.direction *= -1
+                self.facing_right = self.direction > 0
+
+            self.health -= 1
+            self.hurt = True 
+            self.frame_index = 0  
+            if self.health <= 0:
+                self.dead = True
+                self.sounds["archer_death"].set_volume(1)
+                self.sounds["archer_death"].play()
+            else:
+                self.sounds["archer_damage"].play()
+
+    def shoot_arrow(self):
+        arrow_img = pygame.image.load('src/assets/images/enemies/archer/arrow.png').convert_alpha()
+        archer_center = vector(self.rect.center)
+        player_center = vector(self.player.rect.center)
+        direction = (player_center - archer_center).normalize()
+        speed = 500
+        spawn_pos = (self.rect.centerx + 30 * (1 if direction.x >= 0 else -1), self.rect.centery)
+
+        angle = direction.angle_to(vector(1, 0))
+        rotated_arrow = pygame.transform.rotate(arrow_img, angle)
+        Bullet(pos=spawn_pos, surf=rotated_arrow, direction=direction, speed=speed, groups=[self.player.all_sprites], rotating=False, from_who="Enemy")

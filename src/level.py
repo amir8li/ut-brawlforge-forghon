@@ -65,6 +65,7 @@ class Level:
         # objects
         for obj in tmx_map.get_layer_by_name("Objects"):
             if obj.name == "player":
+                player_pos = (obj.x, obj.y)
                 self.player = Player(
                     pos=(obj.x, obj.y),
                     groups=self.all_sprites,
@@ -177,6 +178,14 @@ class Level:
         for sprite in self.damage_sprites.sprites():
             if sprite.rect.colliderect(self.player.hitbox_rect):
                 self.player.damage()
+        for sprite in self.all_sprites:
+            if hasattr(sprite, 'player') and hasattr(sprite, 'direction') and hasattr(sprite, 'facing_right'):
+                if sprite.rect.colliderect(self.player.rect):
+                    player_x = self.player.rect.centerx
+                    archer_x = sprite.rect.centerx
+                    if (sprite.direction > 0 and player_x < archer_x) or (sprite.direction < 0 and player_x > archer_x):
+                        sprite.direction *= -1
+                        sprite.facing_right = sprite.direction > 0
 
     def attack_collision(self):
         for target in self.tooth_sprites.sprites():

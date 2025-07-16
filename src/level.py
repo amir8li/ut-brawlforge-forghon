@@ -6,7 +6,7 @@ from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite
 from src.player import Player
 from src.groups import AllSprites
-from src.enemies import Tooth, Bombastic
+from src.enemies import Tooth, Bombastic, Archer
 
 class Level:
     def __init__(self, tmx_map, level_frames,audio_files, data):
@@ -65,8 +65,7 @@ class Level:
         # objects
         for obj in tmx_map.get_layer_by_name("Objects"):
             if obj.name == "player":
-                # dont understand the bug !!!
-                player_pos = (obj.x, obj.y - 400)
+                player_pos = (obj.x, obj.y)
                 self.player = Player(
                     pos=player_pos,
                     groups=self.all_sprites,
@@ -98,6 +97,8 @@ class Level:
                 Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites)
             elif obj.name == "bombastic":
                 Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.player, audio_files)
+            elif obj.name == "archer":
+                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites), self.collision_sprites, self.player, audio_files)
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
@@ -177,6 +178,14 @@ class Level:
         for sprite in self.damage_sprites.sprites():
             if sprite.rect.colliderect(self.player.hitbox_rect):
                 self.player.damage()
+        for sprite in self.all_sprites:
+            if hasattr(sprite, 'player') and hasattr(sprite, 'direction') and hasattr(sprite, 'facing_right'):
+                if sprite.rect.colliderect(self.player.rect):
+                    player_x = self.player.rect.centerx
+                    archer_x = sprite.rect.centerx
+                    if (sprite.direction > 0 and player_x < archer_x) or (sprite.direction < 0 and player_x > archer_x):
+                        sprite.direction *= -1
+                        sprite.facing_right = sprite.direction > 0
 
     def attack_collision(self):
         for target in self.tooth_sprites.sprites():
@@ -211,7 +220,6 @@ class Level:
 
     def run(self, dt):
         self.all_sprites.update(dt)
-
         self.item_collision()
         self.hit_collision()
         self.attack_collision()

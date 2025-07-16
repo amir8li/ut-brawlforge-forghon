@@ -9,6 +9,7 @@ from src.sprites import Bullet
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, sounds, data):
         super().__init__(groups)
+        self.is_player = True
         self.all_sprites = groups
         self.frames = frames
         self.frame_index = 0

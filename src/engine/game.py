@@ -52,6 +52,7 @@ class Game:
             "bg_tiles": import_folder_dict("src", "assets", "images", "level", "bg", "tiles"),
             "cloud_small": import_folder("src", "assets", "images", "level", "clouds", "small"),
             "cloud_large": import_image("src", "assets", "images", "level", "clouds", "large_cloud"),
+            "archer": import_sub_folders("src", "assets", "images", "enemies", "archer"),
         }
 
         self.ui_frames = {
@@ -69,8 +70,9 @@ class Game:
             'bullet':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bullet.wav')),
             'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3')),
             'bombastic_explosion':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic explosion.wav')),
-            'bombastic_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic death.wav'))
-
+            'bombastic_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic death.wav')),
+            'archer_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'archer death.mp3')),
+            'archer_damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'archer damage.wav'))
         }
     def run(self):
         running = True

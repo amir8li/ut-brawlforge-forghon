@@ -288,6 +288,7 @@ class Archer(pygame.sprite.Sprite):
             self.frame_index = 0  
             if self.health <= 0:
                 self.dead = True
+                self.sounds["archer_death"].set_volume(1)
                 self.sounds["archer_death"].play()
             else:
                 self.sounds["archer_damage"].play()
@@ -302,4 +303,4 @@ class Archer(pygame.sprite.Sprite):
 
         angle = direction.angle_to(vector(1, 0))
         rotated_arrow = pygame.transform.rotate(arrow_img, angle)
-        Bullet(pos=spawn_pos, surf=rotated_arrow, direction=direction, speed=speed, groups=[self.groups()[0]], rotating=False, from_who="Enemy")
+        Bullet(pos=spawn_pos, surf=rotated_arrow, direction=direction, speed=speed, groups=[self.player.all_sprites], rotating=False, from_who="Enemy")

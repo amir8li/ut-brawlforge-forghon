@@ -115,25 +115,31 @@ class EndScreen:
                     elif self.next_rect and self.next_rect.collidepoint(event.pos):
                         choice = "next"
                         running = False
+
             self.draw()
             pygame.display.update()
         return choice
 
     def draw(self):
         self.display.blit(self.background, (0, 0))
+
         if self.result == "gameover":
             for skeleton in self.skeletons:
                 self.display.blit(self.skeleton_img, (skeleton["x"], skeleton["y"]))
+
         if self.result == "win":
             for p in self.particles_up + self.particles_down:
                 img = self.particle_img.copy()
                 img.set_alpha(int(p["alpha"]))
                 self.display.blit(img, (p["x"], p["y"]))
+
         self.display.blit(self.overlay, (0, 0))
+
         panel_surface = pygame.Surface((self.panel_width, self.panel_height), pygame.SRCALPHA)
-        panel_surface.fill((169, 153, 139))
+        pygame.draw.rect(panel_surface, (169, 153, 139), panel_surface.get_rect(), border_radius=16)
         self.display.blit(panel_surface, self.panel_rect.topleft)
         pygame.draw.rect(self.display, (68, 68, 68), self.panel_rect, width=6, border_radius=16)
+
         if self.flash_visible:
             draw_text(
                 self.display,
@@ -143,6 +149,7 @@ class EndScreen:
                 (self.panel_rect.centerx, self.panel_rect.y + 80),
                 shadow=True
             )
+
         self.draw_button(self.restart_rect, "Restart")
         self.draw_button(self.menu_rect, "Menu")
         if self.next_rect:

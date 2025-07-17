@@ -131,9 +131,9 @@ class MainMenu:
 
             for btn in self.buttons:
                 btn.update(mouse_pos, mouse_pressed)
-                glow = pygame.Surface((btn.rect.width, btn.rect.height), pygame.SRCALPHA)
-                glow.fill((255, 255, 255, 40 if btn.hovered else 0))
-                self.display.blit(glow, btn.rect)
+                #glow = pygame.Surface((btn.rect.width, btn.rect.height), pygame.SRCALPHA)
+                #glow.fill((255, 255, 255, 40 if btn.hovered else 0))
+                #self.display.blit(glow, btn.rect)
                 btn.draw(self.display)
 
             pygame.display.update()

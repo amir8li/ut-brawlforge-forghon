@@ -12,7 +12,6 @@ class Button:
         self.normal = pygame.image.load(os.path.join(img_path, "button.png")).convert_alpha()
         self.highlight = pygame.image.load(os.path.join(img_path, "highlighted.png")).convert_alpha()
 
-        # سایز قابل تنظیم
         self.normal = pygame.transform.scale(self.normal, size)
         self.highlight = pygame.transform.scale(self.highlight, size)
 

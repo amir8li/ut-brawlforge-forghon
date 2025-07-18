@@ -6,8 +6,19 @@ from src.utils import draw_text
 
 character_list = ["player1", "player6", "player3", "player4"]
 character_names = ["Blade Knight", "Shadow Rogue", "Fire Mage", "Thunder Viking"]
-single_maps = ["0.tmx", "2.tmx", "5.tmx", "6.tmx"]
-multi_maps = ["1.tmx", "3.tmx", "4.tmx", "7.tmx"]
+single_maps = ["1.tmx", "2.tmx", "5.tmx", "6.tmx"]
+multi_maps = ["0.tmx", "3.tmx", "4.tmx", "7.tmx"]
+
+map_display_names = {
+    "0.tmx": "Clockwork Bay",
+    "1.tmx": "Iron Spire",
+    "2.tmx": "Sawfall Sanctum",
+    "3.tmx": "Victory Valley",
+    "4.tmx": "Chaos Garden",
+    "5.tmx": "Woodstone Passage",
+    "6.tmx": "Gearroot Marsh",
+    "7.tmx": "Verdant Ruins"
+}
 
 SCREEN_WIDTH, SCREEN_HEIGHT = SCREEN_SIZE
 
@@ -23,7 +34,7 @@ class MapCharacterSelect:
         self.map_thumbnails = self.load_map_thumbnails()
         self.button_img = pygame.image.load("src/assets/images/menu/button/square.png").convert_alpha()
         self.highlighted_img = pygame.image.load("src/assets/images/menu/button/highlighted.png").convert_alpha()
-        self.selected_map = 0
+        self.selected_map = None
 
         if self.mode == "multi":
             self.selected_indices = [None, None]
@@ -60,11 +71,17 @@ class MapCharacterSelect:
         thumbnails = []
         maps = single_maps if self.mode == "single" else multi_maps
         for name in maps:
-            square = pygame.Surface((100, 100)).convert_alpha()
-            square.fill("#d5d5d5")
-            framed = pygame.Surface((140, 140), pygame.SRCALPHA)
-            rect = square.get_rect(center=(70, 70))
-            framed.blit(square, rect)
+            preview_path = os.path.join("src", "assets", "images", "menu", "preview", name.replace(".tmx", "") + ".png")
+            if os.path.exists(preview_path):
+                image = pygame.image.load(preview_path).convert_alpha()
+                image = pygame.transform.smoothscale(image, (120, 120))
+                framed = pygame.Surface((140, 140), pygame.SRCALPHA)
+                framed.blit(image, image.get_rect(center=(70, 70)))
+            else:
+                framed = pygame.Surface((140, 140), pygame.SRCALPHA)
+                fallback = pygame.Surface((100, 100))
+                fallback.fill("#d5d5d5")
+                framed.blit(fallback, fallback.get_rect(center=(70, 70)))
             thumbnails.append((name, framed))
         return thumbnails
 
@@ -85,13 +102,15 @@ class MapCharacterSelect:
                         rect = img.get_rect(center=(x, y))
                         if rect.collidepoint(mx, my):
                             if self.mode == "multi":
-                                if i not in self.selected_indices:
-                                    self.selected_indices[0 if self.selected_indices[0] is None else 1] = i
-                                else:
-                                    # اگر قبلاً انتخاب شده بود، جابجا بشه
+                                if i in self.selected_indices:
                                     for p_idx in range(2):
                                         if self.selected_indices[p_idx] == i:
                                             self.selected_indices[p_idx] = None
+                                else:
+                                    for p_idx in range(2):
+                                        if self.selected_indices[p_idx] is None:
+                                            self.selected_indices[p_idx] = i
+                                            break
                             else:
                                 self.selected_character = i
 
@@ -105,15 +124,16 @@ class MapCharacterSelect:
 
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
-                        if self.mode == "single":
-                            selected_map = single_maps[self.selected_map]
-                            selected_name = character_list[self.selected_character]
-                            return selected_map, selected_name
-                        else:
-                            if None not in self.selected_indices:
-                                selected_map = multi_maps[self.selected_map]
-                                selected_characters = [character_list[i] for i in self.selected_indices]
-                                return selected_map, selected_characters
+                        if self.selected_map is not None:
+                            if self.mode == "single":
+                                selected_map = single_maps[self.selected_map]
+                                selected_name = character_list[self.selected_character]
+                                return selected_map, selected_name
+                            else:
+                                if None not in self.selected_indices:
+                                    selected_map = multi_maps[self.selected_map]
+                                    selected_characters = [character_list[i] for i in self.selected_indices]
+                                    return selected_map, selected_characters
 
             self.screen.fill((169, 153, 139))
             self.draw_ui()
@@ -142,12 +162,14 @@ class MapCharacterSelect:
 
         draw_text(self.screen, "Choose your map", self.title_font, "#ffffff", (SCREEN_WIDTH // 2, 420), shadow=True)
         start_x_map = SCREEN_WIDTH // 2 - ((len(self.map_thumbnails) - 1) * 200) // 2
-        for i, (map_name, image) in enumerate(self.map_thumbnails):
+
+        for i, (map_file, image) in enumerate(self.map_thumbnails):
             x = start_x_map + i * 200
             y = 550
-            frame = self.highlighted_img if i == self.selected_map else self.button_img
+            frame = self.highlighted_img if self.selected_map == i else self.button_img
             frame = pygame.transform.scale(frame, (140, 140))
             rect = frame.get_rect(center=(x, y))
             self.screen.blit(frame, rect)
             self.screen.blit(image, image.get_rect(center=rect.center))
-            draw_text(self.screen, map_name.replace(".tmx", ""), self.name_font, "#ffffff", (x, y + 105), shadow=True)
+            display_name = map_display_names.get(map_file, map_file.replace(".tmx", ""))
+            draw_text(self.screen, display_name, self.name_font, "#ffffff", (x, y + 105), shadow=True)

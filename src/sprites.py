@@ -173,3 +173,17 @@ class Bullet(Sprite):
         world_pos = self.pos + vector(640 - self.rect.center[0], 360 - self.rect.center[1])
         if world_pos.x < -100 or world_pos.x > 2000 or world_pos.y < -100 or world_pos.y > 2000:
             self.kill()
+
+class Flag(AnimatedSprite):
+    def __init__(self, pos, frames, groups=None, z=ZLAYERS["main"]):
+        super().__init__(pos, frames, groups, z)
+        self.rect.center = pos
+        self.interaction_rect = self.rect.inflate(100, 100)  # Larger area for interaction
+        self.clicked = False
+        
+    def can_interact(self, player_rect):
+        return self.interaction_rect.colliderect(player_rect)
+    
+    def interact(self):
+        self.clicked = True
+        return True  # Return True to indicate successful interaction

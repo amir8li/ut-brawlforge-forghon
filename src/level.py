@@ -1,16 +1,18 @@
 import pygame
 from pygame import Vector2 as vector
 from random import uniform
+from math import sin
 
 from config import *
-from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite
+from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite, Flag
 from src.player import Player
 from src.groups import AllSprites
-from src.enemies import Tooth
+from src.enemies import Tooth, Bombastic, Archer
 
 class Level:
-    def __init__(self, tmx_map, level_frames,audio_files, data):
+    def __init__(self, tmx_map, level_frames, audio_files, data, font):
         self.data = data
+        self.font = font
 
         self.level_width = tmx_map.width * 64
         self.level_bottom = tmx_map.height * 64
@@ -27,8 +29,13 @@ class Level:
         self.semi_collistion_sprites = pygame.sprite.Group()
         self.damage_sprites = pygame.sprite.Group()
         self.tooth_sprites = pygame.sprite.Group()
+        self.bombastic_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
+        self.flag_sprites = pygame.sprite.Group()
 
+        # Flag interaction state
+        self.near_flag = False
+        self.boss_fight_started = False
 
         self.level_frames = level_frames
         self.setup(tmx_map, level_frames, audio_files)
@@ -42,7 +49,8 @@ class Level:
         for layer in ["BG", "Terrain", "FG", "Platforms"]:
             for x, y, surf in tmx_map.get_layer_by_name(layer).tiles():
                 groups = [self.all_sprites]
-                if layer == "Terrain": groups.append(self.collision_sprites)
+                if layer == "Terrain": 
+                    groups.append(self.collision_sprites)
                 elif layer == "Platforms": groups.append(self.semi_collistion_sprites)
                 match layer:
                     case "BG": z = ZLAYERS["bg tiles"]
@@ -63,10 +71,8 @@ class Level:
         # objects
         for obj in tmx_map.get_layer_by_name("Objects"):
             if obj.name == "player":
-                # dont understand the bug !!!
-                player_pos = (obj.x, obj.y - 400)
                 self.player = Player(
-                    pos=player_pos,
+                    pos=(obj.x, obj.y),
                     groups=self.all_sprites,
                     collision_sprites= self.collision_sprites,
                     semi_collision_sprites= self.semi_collistion_sprites,
@@ -89,6 +95,25 @@ class Level:
 
                     anim_speed = ANIMATION_SPEED if not "palm" in obj.name else 6 + uniform(-1, 1)
                     AnimatedSprite((obj.x, obj.y), frames, groups, z, anim_speed)
+                    
+                # Handle flag specially for boss fight interaction
+                if obj.name == "flag":
+                    flag_sprite = Flag(
+                        pos=(obj.x + obj.width // 2, obj.y + obj.height // 2),
+                        frames=level_frames["flag"],
+                        groups=(self.all_sprites, self.flag_sprites),
+                        z=ZLAYERS["main"]
+                    )
+                    self.boss_start_rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
+
+        # enemies
+        for obj in tmx_map.get_layer_by_name("Enemies"):
+            if obj.name == "tooth":
+                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites)
+            elif obj.name == "bombastic":
+                Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.player, audio_files)
+            elif obj.name == "archer":
+                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites), self.collision_sprites, self.player, audio_files)
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
@@ -138,11 +163,6 @@ class Level:
                         top, bottom = int(start_pos[1]), int(end_pos[1])
                         for y in range(top, bottom, 20):
                             Sprite((x, y), level_frames["saw_chain"], self.all_sprites, ZLAYERS["bg details"])
-    
-        # enemies
-        for obj in tmx_map.get_layer_by_name("Enemies"):
-            if obj.name == "tooth":
-                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites)        
 
         # items
         for obj in tmx_map.get_layer_by_name("Items"):
@@ -181,6 +201,14 @@ class Level:
 
             if target.rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
                 target.reverse()
+        
+
+        for target in self.bombastic_sprites.sprites():
+            facing_target = (self.player.rect.centerx < target.rect.centerx and self.player.face_right) or \
+                            (self.player.rect.centerx > target.rect.centerx and not self.player.face_right)
+
+            if target.hitbox_rect.colliderect(self.player.rect) and self.player.attacking and facing_target and target.state == "chasing":
+                target.take_damage()
 
     def check_constraint(self):
         # left & right borders
@@ -192,18 +220,73 @@ class Level:
         # bottom border
         if self.player.hitbox_rect.bottom >= self.level_bottom:
             print("death")
-        
-        # success
                 
-                
+    def flag_interaction(self):
+        if self.flag_sprites and not self.boss_fight_started:
+            flag = self.flag_sprites.sprites()[0]  # Assuming one flag per level
+            
+            # Check if player is close enough to interact
+            self.near_flag = flag.can_interact(self.player.hitbox_rect)
+            
+            # Visual feedback could be added here (like showing "Press E to interact")
+            
+    def start_boss_fight(self):
+        if not self.boss_fight_started:
+            self.boss_fight_started = True
+            print("Boss fight started!")
+            # Here you would add the actual boss fight logic
+            # For example:
+            # - Load boss enemy
+            # - Change background music
+            # - Show boss health bar
+            # - Lock certain areas
+            return True
+        return False
+
+    def handle_events(self, events):
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    if self.near_flag and not self.boss_fight_started:
+                        # Player clicked while near flag
+                        if self.flag_sprites:
+                            flag = self.flag_sprites.sprites()[0]
+                            if flag.interact():
+                                self.start_boss_fight()
+
+    def draw_ui_elements(self):
+        if self.near_flag and not self.boss_fight_started:
+            # Create a pulsing effect using time
+            pulse = abs(sin(pygame.time.get_ticks() * 0.005)) * 0.3 + 0.7  # Pulse between 0.7 and 1.0
+            
+            # Calculate colors with pulse effect
+            gold_color = (int(255 * pulse), int(215 * pulse), 0)
+            shadow_color = (int(139 * pulse), int(69 * pulse), int(19 * pulse))
+            
+            # Draw interaction prompt with custom font and pulsing color
+            text = self.font.render("Click to start Boss Fight!", True, gold_color)
+            text_rect = text.get_rect(center=(self.display.get_width() // 2, 50))
+            
+            # Add a background/shadow effect
+            shadow_text = self.font.render("Click to start Boss Fight!", True, shadow_color)
+            shadow_rect = shadow_text.get_rect(center=(self.display.get_width() // 2 + 2, 52))
+            
+            # Draw shadow first, then main text
+            self.display.blit(shadow_text, shadow_rect)
+            self.display.blit(text, text_rect)
+            
+            # Optional: Draw flag interaction area for debugging
+            # if self.flag_sprites:
+            #     flag = self.flag_sprites.sprites()[0]
+            #     pygame.draw.rect(self.display, (255, 255, 0), flag.interaction_rect, 2)
 
     def run(self, dt):
         self.all_sprites.update(dt)
-
         self.item_collision()
         self.hit_collision()
         self.attack_collision()
         self.check_constraint()
+        self.flag_interaction()
 
         self.all_sprites.draw(self.player.hitbox_rect.center, dt)
-        # self.player.draw_debug_hitbox(self.display)
+        self.draw_ui_elements()

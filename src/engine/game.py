@@ -18,7 +18,7 @@ class Game:
         self.data = Data(self.ui)
         self.tmx_maps = {0: load_pygame("./data/levels/omni.tmx")}
 
-        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data)
+        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data, self.font)
         
         self.bg_sound = self.audio_files['bg']
         self.bg_sound.set_volume(0.3)
@@ -71,12 +71,17 @@ class Game:
         while running:
             self.screen.fill("black")
             dt = self.clock.tick(FPS) / 1000
-            for event in pygame.event.get():
+            
+            # Collect events
+            events = pygame.event.get()
+            for event in events:
                 if event.type == pygame.QUIT:
                     running = False
                     pygame.quit()
                     sys.exit()
 
+            # Pass events to current stage
+            self.current_stage.handle_events(events)
             self.current_stage.run(dt)
             self.ui.update(dt)
             pygame.display.flip()

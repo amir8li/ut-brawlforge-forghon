@@ -175,10 +175,10 @@ class Level:
             return "gameover"
         if self.player.data.health <= 0:
             return "gameover"
-        gold_items = [item for item in self.item_sprites if item.type == "gold"]
-        if len(gold_items) == 0:
+        if len(self.item_sprites) == 0:
             return "win"
         return None
+
 
     def update(self, dt):
         self.all_sprites.update(dt)

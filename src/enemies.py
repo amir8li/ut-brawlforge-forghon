@@ -291,7 +291,7 @@ class Archer(pygame.sprite.Sprite):
                 self.sounds["archer_death"].set_volume(1)
                 self.sounds["archer_death"].play()
             else:
-                self.sounds["archer_damage"].play()
+                self.sounds["archer_wizard_damage"].play()
 
     def shoot_arrow(self):
         arrow_img = pygame.image.load('src/assets/images/enemies/archer/arrow.png').convert_alpha()
@@ -304,3 +304,100 @@ class Archer(pygame.sprite.Sprite):
         angle = direction.angle_to(vector(1, 0))
         rotated_arrow = pygame.transform.rotate(arrow_img, angle)
         Bullet(pos=spawn_pos, surf=rotated_arrow, direction=direction, speed=speed, groups=[self.player.all_sprites], rotating=False, from_who="Enemy")
+
+class IceBullet(Bullet):
+    def __init__(self, pos, surf, direction, speed, groups, player, freeze_duration=2000):
+        super().__init__(pos, surf, direction, speed, groups, rotating=False, from_who="Enemy")
+        self.player = player
+        self.freeze_duration = freeze_duration
+
+    def update(self, dt):
+        super().update(dt)
+        if self.rect.colliderect(self.player.hitbox_rect):
+            if hasattr(self.player, 'freeze'):
+                self.player.freeze(self.freeze_duration)
+            self.kill()
+
+class IceWizard(pygame.sprite.Sprite):
+    def __init__(self, pos, frames, groups, player, sounds, shoot_cooldown=3000):
+        super().__init__(groups)
+        self.frames = frames  
+        self.state = "Idle"
+        self.frame_index = 0
+        self.image = self.frames["Idle"][0]
+        self.rect = self.image.get_rect(topleft=pos)
+        self.hitbox_rect = self.rect.inflate(-10, -10)
+        self.z = ZLAYERS["main"]
+        self.player = player
+        self.sounds = sounds
+        self.shoot_cooldown = Timer(shoot_cooldown)
+        self.attacking = False
+        self.attack_timer = Timer(400)
+        self.dead = False
+        self.hurt = False
+        self.health = 3
+        self.facing_right = True
+
+    def update(self, dt):
+        if self.player.rect.centerx < self.rect.centerx:
+            self.facing_right = False
+        else:
+            self.facing_right = True
+        if self.dead:
+            finished = self.animate(dt, "Die")
+            if finished:
+                self.kill()
+        elif self.hurt:
+            finished = self.animate(dt, "Hurt")
+            if finished:
+                self.hurt = False
+        elif self.attacking:
+            self.attack_timer.update()
+            finished = self.animate(dt, "Attack")
+            if not self.attack_timer.active:
+                self.attacking = False
+        else:
+            self.animate(dt, "Idle")
+            if not self.shoot_cooldown.active:
+                self.shoot_at_player()
+                self.shoot_cooldown.activate()
+            else:
+                self.shoot_cooldown.update()
+
+    def animate(self, dt, state):
+        self.frame_index += 8 * dt
+        frames = self.frames[state]
+        frame_count = len(frames)
+        frame = frames[int(self.frame_index) % frame_count]
+        if not self.facing_right:
+            frame = pygame.transform.flip(frame, True, False)
+        self.image = frame
+        self.rect = self.image.get_rect(center=self.rect.center)
+        return self.frame_index >= frame_count
+
+    def take_damage(self):
+        if not self.dead:
+            self.health -= 1
+            self.hurt = True
+            self.frame_index = 0
+            if self.health <= 0:
+                self.dead = True
+                self.sounds["wizard_death"].play()
+            else:
+                self.sounds["archer_wizard_damage"].play()
+
+    def shoot_at_player(self):
+        wizard_center = vector(self.rect.center)
+        player_center = vector(self.player.rect.center)
+        direction = (player_center - wizard_center).normalize()
+        speed = 400
+        spawn_pos = self.rect.center
+        snowflake_img = pygame.image.load('src/assets/images/enemies/ice wizard/snowflake.png').convert_alpha()
+        snowflake_img = pygame.transform.scale(snowflake_img, (snowflake_img.get_width() // 1.5, snowflake_img.get_height() // 1.5))
+        IceBullet(pos=spawn_pos, surf=snowflake_img, direction=direction, speed=speed, groups=[self.player.all_sprites], player=self.player)
+        if self.sounds.get("ice_wizard_attack"):
+            self.sounds["ice_wizard_attack"].play()
+        self.attacking = True
+        self.attack_timer = Timer(400)
+        self.attack_timer.activate()
+        self.frame_index = 0

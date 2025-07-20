@@ -6,7 +6,7 @@ from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite
 from src.player import Player
 from src.groups import AllSprites
-from src.enemies import Tooth, Bombastic, Archer
+from src.enemies import Tooth, Bombastic, Archer, IceWizard
 
 class Level:
     def __init__(self, tmx_map, level_frames,audio_files, data):
@@ -29,6 +29,7 @@ class Level:
         self.tooth_sprites = pygame.sprite.Group()
         self.bombastic_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
+        self.ice_wizard_sprites = pygame.sprite.Group()
 
 
         self.level_frames = level_frames
@@ -99,6 +100,9 @@ class Level:
                 Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.player, audio_files)
             elif obj.name == "archer":
                 Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites), self.collision_sprites, self.player, audio_files)
+            elif obj.name == "ice wizard":
+                frames = level_frames["ice_wizard"]
+                IceWizard((obj.x, obj.y), frames, (self.all_sprites, self.damage_sprites, self.ice_wizard_sprites), self.player, audio_files)
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):

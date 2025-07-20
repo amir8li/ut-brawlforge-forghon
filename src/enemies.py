@@ -12,27 +12,78 @@ def is_line_blocked(start, end, rects):
     return False
 
 class Tooth(pygame.sprite.Sprite):
-    def __init__(self, pos, frames, groups, collision_sprites):
+    def __init__(self, pos, frames, groups, collision_sprites, sounds):
         super().__init__(groups)
         self.frames = frames
+        self.sounds = sounds
         self.frame_index = 0
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(topleft=pos)
+        self.hitbox_rect = self.rect.inflate(-10, -10)
         self.z = ZLAYERS["main"]
 
         self.direction = 1
         self.speed = ENEMY_SPEED
         self.collision_rects = [sprite.rect for sprite in collision_sprites]
 
-        self.hit_timer = Timer(350)
+        min_dist = float('inf')
+        new_y = self.rect.y
+        for platform_rect in self.collision_rects:
+            if platform_rect.left <= self.rect.centerx <= platform_rect.right:
+                platform_top = platform_rect.top
+                if platform_top >= self.rect.bottom and (platform_top - self.rect.bottom) < min_dist:
+                    min_dist = platform_top - self.rect.bottom
+                    new_y = platform_top - self.rect.height
+        if min_dist != float('inf'):
+            self.rect.y = new_y
+            self.hitbox_rect.center = self.rect.center
 
+        self.hit_timer = Timer(350)
+        self.name = "Tooth"
+        # Font for name display
+        self.font = pygame.font.Font(None, 24)
+        self.name_surface = self.font.render(self.name, True, (0, 0, 0))  # Black text
+        self.name_rect = self.name_surface.get_rect()
+
+        self.health = 2  
+        self.dead = False
+        self.hurt = False
+        self.hurt_timer = Timer(300)
+        self.death_sound_played = False
+        self.death_timer = Timer(400)
+        
     def reverse(self):
         if not self.hit_timer.active:
             self.direction *= -1
             self.hit_timer.activate()
 
+    def draw_name(self, display_surface, offset):
+        name_x = self.rect.centerx - self.name_rect.width // 2 + offset[0]
+        name_y = self.rect.top - 25 + offset[1]  
+        self.name_rect.topleft = (name_x, name_y)
+        
+        bg_rect = self.name_rect.inflate(8, 4) 
+        
+        temp_surface = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(temp_surface, (255, 255, 255, 200), temp_surface.get_rect(), border_radius=6)  # White background
+        display_surface.blit(temp_surface, bg_rect)
+        
+        display_surface.blit(self.name_surface, self.name_rect)
+
+    def take_damage(self):
+        if not self.dead:
+            self.health -= 1
+            self.hurt = True
+            self.hurt_timer.activate()
+            self.frame_index = 0
+            if self.health <= 0:
+                self.dead = True
+                self.death_timer.activate()
+
     def update(self, dt):
         self.hit_timer.update()
+        self.hurt_timer.update()
+        self.death_timer.update()
 
         # animation
         self.frame_index += 6 * dt
@@ -40,8 +91,35 @@ class Tooth(pygame.sprite.Sprite):
         if self.direction < 0:
             self.image = pygame.transform.flip(self.image, True, False)
 
+        # flicker logic
+        if self.dead:
+            if not self.death_sound_played:
+                self.sounds["tooth_death"].play()
+                self.death_sound_played = True
+            if self.hurt_timer.active:
+                if int(pygame.time.get_ticks() / 100) % 2 == 0:
+                    self.image.set_alpha(100)
+                else:
+                    self.image.set_alpha(255)
+            if not self.death_timer.active:
+                self.kill()
+            return
+        elif self.hurt:
+            self.sounds["tooth_damage"].play()
+            if self.hurt_timer.active:
+                if int(pygame.time.get_ticks() / 100) % 2 == 0:
+                    self.image.set_alpha(100)
+                else:
+                    self.image.set_alpha(255)
+            else:
+                self.hurt = False
+                self.image.set_alpha(255)
+        else:
+            self.image.set_alpha(255)
+
         # movement
         self.rect.x += self.direction * self.speed * dt
+        self.hitbox_rect.center = self.rect.center
 
         # reverse direction
         floor_rect_right = pygame.Rect(self.rect.bottomright, (1, 1))
@@ -174,6 +252,21 @@ class Archer(pygame.sprite.Sprite):
         self.collision_sprites = collision_sprites
         self.hitbox_rect = self.rect.inflate(-10, -10)
         self.pos = vector(self.rect.topleft)
+
+        collision_rects = [sprite.rect for sprite in collision_sprites]
+        min_dist = float('inf')
+        new_y = self.rect.y
+        for platform_rect in collision_rects:
+            if platform_rect.left <= self.rect.centerx <= platform_rect.right:
+                platform_top = platform_rect.top
+                if platform_top >= self.rect.bottom and (platform_top - self.rect.bottom) < min_dist:
+                    min_dist = platform_top - self.rect.bottom
+                    new_y = platform_top - self.rect.height
+        if min_dist != float('inf'):
+            OFFSET = 6 #
+            self.rect.y = new_y + OFFSET
+            self.hitbox_rect.center = self.rect.center
+            self.pos.y = self.rect.y
 
         # Sight and combat
         self.player = player

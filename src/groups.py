@@ -79,3 +79,7 @@ class AllSprites(pygame.sprite.Group):
         for sprite in sorted(self, key = lambda sprite: sprite.z):
             offset_pos = sprite.rect.topleft + self.offset
             self.display_surf.blit(sprite.image, offset_pos)
+
+            # Draw enemy names above their heads
+            if hasattr(sprite, 'draw_name') and hasattr(sprite, 'name'):
+                sprite.draw_name(self.display_surf, self.offset)

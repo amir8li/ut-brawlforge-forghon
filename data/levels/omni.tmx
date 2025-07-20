@@ -203,7 +203,7 @@
   <object id="12" name="palm_small" gid="222" x="1095.33" y="277.33" width="80" height="103"/>
   <object id="13" name="palm_small" gid="222" x="1245.33" y="261.33" width="80" height="103"/>
   <object id="14" name="palm_small" gid="222" x="1202" y="287.33" width="80" height="103"/>
-  <object id="15" name="player" gid="223" x="693.62" y="-253.515" width="74" height="56"/>
+  <object id="15" name="player" gid="223" x="724.62" y="-160.515" width="74" height="56"/>
   <object id="27" name="palm_bg" gid="217" x="764" y="452" width="128" height="128"/>
   <object id="43" name="palm_bg_left" gid="228" x="245" y="562" width="104" height="106"/>
   <object id="44" name="palm_bg_right" gid="229" x="866" y="496" width="104" height="106"/>
@@ -285,15 +285,15 @@
     <property name="reverse" type="bool" value="true"/>
    </properties>
   </object>
-  <object id="38" name="tooth" gid="225" x="1167" y="576" width="48" height="46"/>
+  <object id="38" name="tooth" gid="225" x="1318" y="570" width="48" height="46"/>
   <object id="39" name="shell" gid="224" x="576" y="448" width="76" height="46">
    <properties>
     <property name="reverse" type="bool" value="false"/>
    </properties>
   </object>
   <object id="98" name="bombastic" gid="2147483892" x="988" y="248" width="128" height="120"/>
-  <object id="103" name="archer" gid="2147483900" x="1437" y="281" width="80" height="98"/>
-  <object id="106" name="ice wizard" gid="297" x="427" y="104" width="90" height="75"/>
+  <object id="103" name="archer" gid="2147483900" x="1401" y="259" width="80" height="98"/>
+  <object id="106" name="ice wizard" gid="297" x="438" y="153" width="90" height="75"/>
  </objectgroup>
  <objectgroup id="2" name="Water">
   <object id="2" name="water" x="0" y="640" width="2560" height="320"/>

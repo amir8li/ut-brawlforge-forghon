@@ -95,7 +95,7 @@ class Level:
         # enemies
         for obj in tmx_map.get_layer_by_name("Enemies"):
             if obj.name == "tooth":
-                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites)
+                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites, audio_files)
             elif obj.name == "bombastic":
                 Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.player, audio_files)
             elif obj.name == "archer":

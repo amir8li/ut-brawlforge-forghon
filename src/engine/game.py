@@ -74,7 +74,9 @@ class Game:
             'bombastic_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic death.wav')),
             'archer_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'archer death.mp3')),
             'archer_wizard_damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'archer wizard damage.wav')),
-            'wizard_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'wizard death.wav'))
+            'wizard_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'wizard death.wav')),
+            'tooth_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'tooth death.wav')),
+            'tooth_damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'tooth damage.wav'))
         }
     def run(self):
         running = True
@@ -88,5 +90,8 @@ class Game:
                     sys.exit()
 
             self.current_stage.run(dt)
+            # Draw names above Tooth enemies
+            for tooth in self.current_stage.tooth_sprites:
+                tooth.draw_name(self.screen, self.current_stage.all_sprites.offset)
             self.ui.update(dt)
             pygame.display.flip()

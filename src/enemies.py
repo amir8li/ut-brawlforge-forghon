@@ -252,3 +252,77 @@ class Archer(pygame.sprite.Sprite):
             self.dead = True  
             # if self.sounds.get("archer_die"):
             #     self.sounds["archer_die"].play()
+
+class Boss(pygame.sprite.Sprite):
+    def __init__(self, pos, groups, player):
+        super().__init__(groups)
+        self.player = player
+        
+        # Create a simple rectangle boss
+        self.image = pygame.Surface((128, 128))
+        self.image.fill((150, 0, 0))  # Dark red color
+        self.rect = self.image.get_rect(center=pos)
+        self.hitbox_rect = self.rect.inflate(-20, -20)
+        self.z = ZLAYERS["main"]
+        
+        # Boss stats
+        self.health = 100
+        self.max_health = 100
+        self.speed = 100
+        self.damage = 2
+        
+        # Movement
+        self.direction = vector(1, 0)
+        self.move_timer = 0
+        self.attack_timer = Timer(3000)  # Attack every 3 seconds
+        
+        # Visual feedback
+        self.hit_timer = Timer(200)
+        
+    def update(self, dt):
+        self.hit_timer.update()
+        self.attack_timer.update()
+
+        self.move_timer += dt
+        if self.move_timer > 2.0:
+            self.direction.x *= -1
+            self.move_timer = 0
+
+        self.rect.x += self.direction.x * self.speed * dt
+        
+        # Keep boss within bounds
+        if self.rect.left < 100:
+            self.rect.left = 100
+            self.direction.x = 1
+        elif self.rect.right > 2400:
+            self.rect.right = 2400
+            self.direction.x = -1
+            
+        self.hitbox_rect.center = self.rect.center
+        
+        # Simple attack pattern
+        if not self.attack_timer.active:
+            self.attack()
+            self.attack_timer.activate()
+            
+        # Visual feedback when hit
+        if self.hit_timer.active:
+            self.image.fill((255, 100, 100))  # Light red when hit
+        else:
+            self.image.fill((150, 0, 0))  # Normal dark red
+            
+    def attack(self):
+        distance = vector(self.rect.center) - vector(self.player.rect.center)
+        if distance.length() < 300:  # Attack range
+            self.player.damage()
+            print("Boss attacks!")
+            
+    def take_damage(self, damage=10):
+        if not self.hit_timer.active:
+            self.health -= damage
+            self.hit_timer.activate()
+            print(f"Boss health: {self.health}/{self.max_health}")
+            
+            if self.health <= 0:
+                self.kill()
+                print("Boss defeated!")

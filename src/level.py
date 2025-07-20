@@ -7,12 +7,13 @@ from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite, Flag
 from src.player import Player
 from src.groups import AllSprites
-from src.enemies import Tooth, Bombastic, Archer
+from src.enemies import Tooth, Bombastic, Archer, Boss
 
 class Level:
-    def __init__(self, tmx_map, level_frames, audio_files, data, font):
+    def __init__(self, tmx_map, level_frames, audio_files, data, font, game=None):
         self.data = data
         self.font = font
+        self.game = game
 
         self.level_width = tmx_map.width * 64
         self.level_bottom = tmx_map.height * 64
@@ -30,12 +31,18 @@ class Level:
         self.damage_sprites = pygame.sprite.Group()
         self.tooth_sprites = pygame.sprite.Group()
         self.bombastic_sprites = pygame.sprite.Group()
+        self.archer_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
         self.flag_sprites = pygame.sprite.Group()
+        self.boss_sprites = pygame.sprite.Group()
 
-        # Flag interaction state
         self.near_flag = False
         self.boss_fight_started = False
+        
+        self.is_boss_level = "boss" in str(tmx_map)
+
+        # Fog of war for boss fight
+        self.fog_radius = 200  # Radius of visible area around player
 
         self.level_frames = level_frames
         self.setup(tmx_map, level_frames, audio_files)
@@ -78,7 +85,8 @@ class Level:
                     semi_collision_sprites= self.semi_collistion_sprites,
                     frames=level_frames["player"],
                     sounds = audio_files,
-                    data = self.data)
+                    data = self.data
+                )
             else:
                 if obj.name in ("barrel", "crate"):
                     Sprite((obj.x, obj.y), obj.image, (self.all_sprites, self.collision_sprites))
@@ -113,7 +121,13 @@ class Level:
             elif obj.name == "bombastic":
                 Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.player, audio_files)
             elif obj.name == "archer":
-                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites), self.collision_sprites, self.player, audio_files)
+                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites, self.archer_sprites), self.collision_sprites, self.player, audio_files)
+        
+        if self.is_boss_level:
+            # Spawn boss in the center of the level
+            boss_x = (tmx_map.width * TILE_SIZE) // 2
+            boss_y = (tmx_map.height * TILE_SIZE) // 2 - 100
+            Boss((boss_x, boss_y), (self.all_sprites, self.damage_sprites, self.boss_sprites), self.player)
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
@@ -210,6 +224,14 @@ class Level:
             if target.hitbox_rect.colliderect(self.player.rect) and self.player.attacking and facing_target and target.state == "chasing":
                 target.take_damage()
 
+        # Boss attack collision
+        for target in self.boss_sprites.sprites():
+            facing_target = (self.player.rect.centerx < target.rect.centerx and self.player.face_right) or \
+                            (self.player.rect.centerx > target.rect.centerx and not self.player.face_right)
+
+            if target.hitbox_rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
+                target.take_damage()
+
     def check_constraint(self):
         # left & right borders
         if self.player.hitbox_rect.left <= 0:
@@ -231,15 +253,10 @@ class Level:
             # Visual feedback could be added here (like showing "Press E to interact")
             
     def start_boss_fight(self):
-        if not self.boss_fight_started:
+        if not self.boss_fight_started and self.game:
             self.boss_fight_started = True
-            print("Boss fight started!")
-            # Here you would add the actual boss fight logic
-            # For example:
-            # - Load boss enemy
-            # - Change background music
-            # - Show boss health bar
-            # - Lock certain areas
+            print("Switching to boss level...")
+            self.game.switch_to_boss_level()
             return True
         return False
 
@@ -256,29 +273,70 @@ class Level:
 
     def draw_ui_elements(self):
         if self.near_flag and not self.boss_fight_started:
-            # Create a pulsing effect using time
             pulse = abs(sin(pygame.time.get_ticks() * 0.005)) * 0.3 + 0.7  # Pulse between 0.7 and 1.0
             
-            # Calculate colors with pulse effect
             gold_color = (int(255 * pulse), int(215 * pulse), 0)
             shadow_color = (int(139 * pulse), int(69 * pulse), int(19 * pulse))
             
-            # Draw interaction prompt with custom font and pulsing color
             text = self.font.render("Click to start Boss Fight!", True, gold_color)
             text_rect = text.get_rect(center=(self.display.get_width() // 2, 50))
             
-            # Add a background/shadow effect
             shadow_text = self.font.render("Click to start Boss Fight!", True, shadow_color)
             shadow_rect = shadow_text.get_rect(center=(self.display.get_width() // 2 + 2, 52))
             
-            # Draw shadow first, then main text
             self.display.blit(shadow_text, shadow_rect)
             self.display.blit(text, text_rect)
+
+
+    def draw_boss_health(self):
+        if self.boss_sprites:
+            boss = self.boss_sprites.sprites()[0]
+            # Draw health bar at the top of the screen
+            bar_width = 400
+            bar_height = 20
+            bar_x = (self.display.get_width() - bar_width) // 2
+            bar_y = 20
             
-            # Optional: Draw flag interaction area for debugging
-            # if self.flag_sprites:
-            #     flag = self.flag_sprites.sprites()[0]
-            #     pygame.draw.rect(self.display, (255, 255, 0), flag.interaction_rect, 2)
+            # Background bar
+            pygame.draw.rect(self.display, (100, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+            
+            # Health bar
+            health_percentage = boss.health / boss.max_health
+            health_width = int(bar_width * health_percentage)
+            pygame.draw.rect(self.display, (200, 0, 0), (bar_x, bar_y, health_width, bar_height))
+            
+            # Border
+            pygame.draw.rect(self.display, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 2)
+            
+            # Boss name
+            boss_text = self.font.render("BOSS", True, (255, 255, 255))
+            boss_rect = boss_text.get_rect(center=(self.display.get_width() // 2, bar_y - 15))
+            self.display.blit(boss_text, boss_rect)
+
+    def draw_fog_of_war(self):
+        if self.is_boss_level:
+            # Create a surface for the fog effect
+            fog_surface = pygame.Surface((self.display.get_width(), self.display.get_height()), pygame.SRCALPHA)
+            
+            # Get player's screen position
+            camera_offset = self.all_sprites.offset
+            player_screen_pos = (
+                int(self.player.hitbox_rect.centerx + camera_offset.x),
+                int(self.player.hitbox_rect.centery + camera_offset.y)
+            )
+            
+            # Fill the entire screen with a dark color
+            fog_surface.fill((0, 0, 0, 220))
+
+            # Create a gradient effect for a soft edge
+            for i in range(60):
+                radius = self.fog_radius - i * 3
+                alpha = 220 - i * 3.5
+                if radius > 0 and alpha > 0:
+                    pygame.draw.circle(fog_surface, (0,0,0,alpha), player_screen_pos, radius)
+
+            # Blit the fog surface onto the display
+            self.display.blit(fog_surface, (0, 0))
 
     def run(self, dt):
         self.all_sprites.update(dt)
@@ -290,3 +348,5 @@ class Level:
 
         self.all_sprites.draw(self.player.hitbox_rect.center, dt)
         self.draw_ui_elements()
+        self.draw_boss_health()
+        self.draw_fog_of_war()

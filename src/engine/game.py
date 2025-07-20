@@ -16,9 +16,12 @@ class Game:
 
         self.ui = UI(self.font, self.ui_frames)
         self.data = Data(self.ui)
-        self.tmx_maps = {0: load_pygame("./data/levels/omni.tmx")}
+        self.tmx_maps = {
+            0: load_pygame("./data/levels/omni.tmx"),
+            "boss": load_pygame("./data/levels/boss.tmx")
+        }
 
-        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data, self.font)
+        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data, self.font, self)
         
         self.bg_sound = self.audio_files['bg']
         self.bg_sound.set_volume(0.3)
@@ -72,7 +75,6 @@ class Game:
             self.screen.fill("black")
             dt = self.clock.tick(FPS) / 1000
             
-            # Collect events
             events = pygame.event.get()
             for event in events:
                 if event.type == pygame.QUIT:
@@ -80,8 +82,10 @@ class Game:
                     pygame.quit()
                     sys.exit()
 
-            # Pass events to current stage
             self.current_stage.handle_events(events)
             self.current_stage.run(dt)
             self.ui.update(dt)
             pygame.display.flip()
+
+    def switch_to_boss_level(self):
+        self.current_stage = Level(self.tmx_maps["boss"], self.level_frames, self.audio_files, self.data, self.font, self)

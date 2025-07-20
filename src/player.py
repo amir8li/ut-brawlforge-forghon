@@ -99,7 +99,6 @@ class Player(pygame.sprite.Sprite):
     def shoot(self):
         if not self.timers["shoot_cooldown"].active:  
             spawn_pos = (self.rect.centerx, self.rect.centery)
-            
             Bullet(
                 pos=spawn_pos,
                 surf=self.frames["bullet"][0],  
@@ -243,11 +242,3 @@ class Player(pygame.sprite.Sprite):
         self.get_state()
         self.animate(dt)
         self.flicker() 
-
-    # def draw_debug_hitbox(self, surface):
-    #     """Draw the hitbox and visual rect for debugging purposes"""
-    #     import pygame
-    #     # Draw the visual sprite rect in green
-    #     pygame.draw.rect(surface, (0, 255, 0), self.rect, 2)
-    #     # Draw the hitbox rect in red
-    #     pygame.draw.rect(surface, (255, 0, 0), self.hitbox_rect, 2) 

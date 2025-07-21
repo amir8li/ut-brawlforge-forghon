@@ -41,6 +41,9 @@ class Game:
             "spike": import_image("src", "assets", "images", "enemies", "spike_ball", "Spiked Ball"),
             "spike_chain": import_image("src", "assets", "images", "enemies", "spike_ball", "spiked_chain"),
             "tooth": import_folder("src", "assets", "images", "enemies", "tooth", "run"),
+            "bombastic": import_folder("src", "assets", "images", "enemies", "bombastic", "Moving"),
+            "bombastic_explosion": import_folder("src", "assets", "images", "enemies", "bombastic", "Explosion"),
+            "bombastic_dead": import_folder("src", "assets", "images", "enemies", "bombastic", "Dead"),
             "palms": import_sub_folders("src", "assets", "images", "level", "palms"),
             "water_top": import_folder("src", "assets", "images", "level", "water", "top"),
             "water_body": import_image("src", "assets", "images", "level", "water", "body"),
@@ -49,6 +52,8 @@ class Game:
             "bg_tiles": import_folder_dict("src", "assets", "images", "level", "bg", "tiles"),
             "cloud_small": import_folder("src", "assets", "images", "level", "clouds", "small"),
             "cloud_large": import_image("src", "assets", "images", "level", "clouds", "large_cloud"),
+            "archer": import_sub_folders("src", "assets", "images", "enemies", "archer"),
+            "ice_wizard": import_sub_folders("src", "assets", "images", "enemies", "ice wizard")
         }
 
         self.ui_frames = {
@@ -64,7 +69,14 @@ class Game:
             'jump':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'jump.wav')),
             'damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'damage.wav')),
             'bullet':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bullet.wav')),
-            'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3'))
+            'bg':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'starlight_city.mp3')),
+            'bombastic_explosion':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic explosion.wav')),
+            'bombastic_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'bombastic death.wav')),
+            'archer_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'archer death.mp3')),
+            'archer_wizard_damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'archer wizard damage.wav')),
+            'wizard_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'wizard death.wav')),
+            'tooth_death':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'tooth death.wav')),
+            'tooth_damage':pygame.mixer.Sound(join('src', 'assets', 'sounds', 'tooth damage.wav'))
         }
     def run(self):
         running = True
@@ -78,5 +90,8 @@ class Game:
                     sys.exit()
 
             self.current_stage.run(dt)
+            # Draw names above Tooth enemies
+            for tooth in self.current_stage.tooth_sprites:
+                tooth.draw_name(self.screen, self.current_stage.all_sprites.offset)
             self.ui.update(dt)
             pygame.display.flip()

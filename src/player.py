@@ -9,6 +9,7 @@ from src.sprites import Bullet
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, sounds, data):
         super().__init__(groups)
+        self.is_player = True
         self.all_sprites = groups
         self.frames = frames
         self.frame_index = 0
@@ -62,9 +63,20 @@ class Player(pygame.sprite.Sprite):
         self.damaged_sound = sounds['damage']
         self.damaged_sound.set_volume(0.6)
 
+        self.frozen = False
+        self.frozen_timer = Timer(0)
 
+
+    def freeze(self, duration):
+        self.frozen = True
+        self.frozen_timer = Timer(duration)
+        self.frozen_timer.activate()
 
     def input(self):
+        if self.frozen:
+            self.direction.x = 0
+            self.jump = False
+            return
         keys = pygame.key.get_pressed()
         input_vector = vector(0, 0)
 
@@ -111,6 +123,8 @@ class Player(pygame.sprite.Sprite):
             self.timers["shoot_cooldown"].activate()  
 
     def move(self, dt):
+        if self.frozen:
+            return
         self.hitbox_rect.x += self.direction.x * self.speed
         self.collision('horizontal')
 
@@ -236,18 +250,17 @@ class Player(pygame.sprite.Sprite):
     def update(self, dt):
         self.old_rect = self.hitbox_rect.copy()
         self.update_timers()
+        if self.frozen:
+            self.frozen_timer.update()
+            if not self.frozen_timer.active and self.frozen:
+                self.frozen = False
         self.input()
         self.platform_move(dt)
         self.move(dt)
         self.check_contact()
         self.get_state()
         self.animate(dt)
-        self.flicker() 
+        self.flicker()
+        if self.frozen:
+            self.state = "idle"
 
-    # def draw_debug_hitbox(self, surface):
-    #     """Draw the hitbox and visual rect for debugging purposes"""
-    #     import pygame
-    #     # Draw the visual sprite rect in green
-    #     pygame.draw.rect(surface, (0, 255, 0), self.rect, 2)
-    #     # Draw the hitbox rect in red
-    #     pygame.draw.rect(surface, (255, 0, 0), self.hitbox_rect, 2) 

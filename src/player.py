@@ -32,6 +32,7 @@ class Player(pygame.sprite.Sprite):
 
         # shooting
         self.bullet_direction = vector()
+        self.attacked_enemies = []
 
         # cayote_time
         self.cayote_time = 0.1
@@ -107,6 +108,7 @@ class Player(pygame.sprite.Sprite):
             self.frame_index = 0
             self.timers["attack_cooldown"].activate()
             self.attack_sound.play()
+            self.attacked_enemies = []
 
     def shoot(self):
         if not self.timers["shoot_cooldown"].active:  

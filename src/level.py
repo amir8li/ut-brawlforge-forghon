@@ -30,6 +30,7 @@ class Level:
         self.bombastic_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
         self.ice_wizard_sprites = pygame.sprite.Group()
+        self.archer_sprites = pygame.sprite.Group()
 
 
         self.level_frames = level_frames
@@ -95,11 +96,11 @@ class Level:
         # enemies
         for obj in tmx_map.get_layer_by_name("Enemies"):
             if obj.name == "tooth":
-                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites, audio_files)
+                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites, audio_files, self.player)
             elif obj.name == "bombastic":
                 Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.player, audio_files)
             elif obj.name == "archer":
-                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites), self.collision_sprites, self.player, audio_files)
+                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites, self.archer_sprites), self.collision_sprites, self.player, audio_files)
             elif obj.name == "ice wizard":
                 frames = level_frames["ice_wizard"]
                 IceWizard((obj.x, obj.y), frames, (self.all_sprites, self.damage_sprites, self.ice_wizard_sprites), self.player, audio_files)
@@ -192,20 +193,16 @@ class Level:
                         sprite.facing_right = sprite.direction > 0
 
     def attack_collision(self):
-        for target in self.tooth_sprites.sprites():
-            facing_target = (self.player.rect.centerx < target.rect.centerx and self.player.face_right) or \
-                            (self.player.rect.centerx > target.rect.centerx and not self.player.face_right)
-
-            if target.rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
-                target.reverse()
+        enemy_sprites = self.tooth_sprites.sprites() + self.bombastic_sprites.sprites() + self.archer_sprites.sprites() + self.ice_wizard_sprites.sprites()
         
-
-        for target in self.bombastic_sprites.sprites():
+        for target in enemy_sprites:
             facing_target = (self.player.rect.centerx < target.rect.centerx and self.player.face_right) or \
                             (self.player.rect.centerx > target.rect.centerx and not self.player.face_right)
 
-            if target.hitbox_rect.colliderect(self.player.rect) and self.player.attacking and facing_target and target.state == "chasing":
-                target.take_damage()
+            if target.hitbox_rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
+                if target not in self.player.attacked_enemies:
+                    target.take_damage()
+                    self.player.attacked_enemies.append(target)
 
     def check_constraint(self):
         # left & right borders

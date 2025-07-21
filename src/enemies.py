@@ -12,7 +12,7 @@ def is_line_blocked(start, end, rects):
     return False
 
 class Tooth(pygame.sprite.Sprite):
-    def __init__(self, pos, frames, groups, collision_sprites, sounds):
+    def __init__(self, pos, frames, groups, collision_sprites, sounds, player):
         super().__init__(groups)
         self.frames = frames
         self.sounds = sounds
@@ -21,6 +21,7 @@ class Tooth(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox_rect = self.rect.inflate(-10, -10)
         self.z = ZLAYERS["main"]
+        self.player = player
 
         self.direction = 1
         self.speed = ENEMY_SPEED
@@ -52,11 +53,6 @@ class Tooth(pygame.sprite.Sprite):
         self.death_sound_played = False
         self.death_timer = Timer(400)
         
-    def reverse(self):
-        if not self.hit_timer.active:
-            self.direction *= -1
-            self.hit_timer.activate()
-
     def draw_name(self, display_surface, offset):
         name_x = self.rect.centerx - self.name_rect.width // 2 + offset[0]
         name_y = self.rect.top - 25 + offset[1]  
@@ -79,6 +75,11 @@ class Tooth(pygame.sprite.Sprite):
             if self.health <= 0:
                 self.dead = True
                 self.death_timer.activate()
+            
+            player_x = self.player.rect.centerx
+            enemy_x = self.rect.centerx
+            if (self.direction > 0 and player_x < enemy_x) or (self.direction < 0 and player_x > enemy_x):
+                self.direction *= -1
 
     def update(self, dt):
         self.hit_timer.update()

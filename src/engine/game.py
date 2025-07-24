@@ -1,7 +1,6 @@
 import pygame
 import sys
 from pytmx.util_pygame import load_pygame
-
 from config import *
 from src.utils import *
 from src.level import Level
@@ -20,19 +19,41 @@ class Game:
 
         self.import_assets()
 
-        self.ui = UI(self.font, self.ui_frames)
-        self.data = Data(self.ui)
-        self.data.name = self.selected_hero  # ← این خط مهمه
+        if self.mode == "multi" and self.player_names and len(self.player_names) >= 2:
+            names = {0: self.player_names[0], 1: self.player_names[1]}
+        else:
+            names = None
+
+        self.ui = UI(self.font, self.ui_frames, self.mode, player_names=names)
+
+        self.data = [Data(self.ui, i) for i in range(2 if self.mode == "multi" else 1)]
+        if self.mode == "multi":
+            for i, data in enumerate(self.data):
+                data.name = self.player_names[i]
+                data.character = self.selected_hero[i]
+        else:
+            self.data[0].name = self.player_names[0]
+            self.data[0].character = self.selected_hero
 
         self.tmx_maps = {0: load_pygame(join("data", "levels", self.selected_map))}
-        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data)
+        self.current_stage = Level(
+            self.tmx_maps[0],
+            self.level_frames,
+            self.audio_files,
+            self.data,
+            self.powerup_locations 
+        )
+
 
         self.bg_sound = self.audio_files['bg']
         self.bg_sound.set_volume(0.3)
         self.bg_sound.play(-1)
 
     def import_assets(self):
-        self.player_frames = import_character_frames("src", "assets", "images", "players", self.selected_hero)
+        if self.mode == "multi":
+            self.player_frames = [import_character_frames("src", "assets", "images", "players", hero) for hero in self.selected_hero]
+        else:
+            self.player_frames = import_character_frames("src", "assets", "images", "players", self.selected_hero)
 
         self.level_frames = {
             "flag": import_folder("src", "assets", "images", "level", "flag"),
@@ -58,7 +79,35 @@ class Game:
             "bg_tiles": import_folder_dict("src", "assets", "images", "level", "bg", "tiles"),
             "cloud_small": import_folder("src", "assets", "images", "level", "clouds", "small"),
             "cloud_large": import_image("src", "assets", "images", "level", "clouds", "large_cloud"),
+            "powerups": {
+                "double_jump": import_image("src", "assets", "images", "powerup", "double_jump"),
+                "magic": import_image("src", "assets", "images", "powerup", "magic"),
+                "shield": import_image("src", "assets", "images", "powerup", "shield"),
+            },
         }
+        self.powerup_locations = {
+            "6.tmx": {
+                "double_jump": [(200, 550), (600, 400), (1000, 300)],
+                "magic": [(300, 150), (800, 180)],
+                "shield": [(150, 350), (650, 200)]
+            },
+            "3.tmx": {
+                "double_jump": [(180, 480), (500, 440)],
+                "magic": [(350, 300), (850, 280)],
+                "shield": [(250, 200), (720, 220)]
+            },
+            "4.tmx": {
+                "double_jump": [(600, 480)],
+                "magic": [(800, 360)],
+                "shield": [(720, 300)]
+            },
+            "7.tmx": {
+                "double_jump": [(240, 380), (800, 360)],
+                "magic": [(400, 240), (1000, 220)],
+                "shield": [(150, 140), (650, 120)]
+            }
+        }
+
 
         self.ui_frames = {
             "heart": import_folder("src", "assets", "images", "ui", "heart"),
@@ -93,6 +142,7 @@ class Game:
             pygame.display.flip()
 
             result = self.current_stage.check_constraint()
-            if result in ["win", "gameover"]:
+
+            if result in ["win", "gameover"] or (result is not None and result.endswith("won")):
                 self.bg_sound.stop()
                 return result

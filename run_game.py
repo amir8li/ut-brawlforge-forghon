@@ -22,7 +22,7 @@ def run_game(mode, selected_map, selected_hero, player_names):
         )
         result = game.run()
 
-        if result in ["win", "gameover"]:
+        if result in ["win", "gameover"] or result.endswith("won"):
             background_snapshot = pygame.display.get_surface().copy()
             end_screen = EndScreen(pygame.display.get_surface(), result, background_snapshot)
             choice = end_screen.run()
@@ -57,7 +57,7 @@ def main():
             else:
                 player_names = ["Player"]
 
-            map_char_select = MapCharacterSelect(screen, selected_mode, player_names)
+            map_char_select = MapCharacterSelect(screen, selected_mode, player_names) 
             selected_map, selected_characters = map_char_select.run()
 
             result = run_game(

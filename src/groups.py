@@ -27,13 +27,11 @@ class AllSprites(pygame.sprite.Group):
             self.small_clouds = clouds["small"]
             self.cloud_direction = -1
 
-            # large cloud
             self.large_cloud_speed = 50
             self.large_cloud_x = 0
             self.large_cloud_tiles = int(self.width / self.large_cloud.get_width()) + 2
             self.large_cloud_width, self.large_cloud_height = self.large_cloud.get_size()
 
-            # small clouds
             self.cloud_timer = Timer(2500, self.create_cloud, True)
             self.cloud_timer.activate()
             for cloud in range(15):
@@ -67,7 +65,6 @@ class AllSprites(pygame.sprite.Group):
         self.offset.x = -(target_pos[0] - SCREEN_SIZE[0] // 2)
         self.offset.y = -(target_pos[1] - SCREEN_SIZE[1] // 2)
 
-        # Clamp camera to level bounds
         self.offset.x = max(-(self.width - SCREEN_SIZE[0]), min(0, self.offset.x))
         self.offset.y = max(-(self.height - SCREEN_SIZE[1]), min(0, self.offset.y))
 
@@ -81,4 +78,15 @@ class AllSprites(pygame.sprite.Group):
             self.display_surf.blit(sprite.image, offset_pos)
 
     def custom_draw(self, player):
-        self.draw(player.rect.center, 1/60) 
+        if isinstance(player, list):
+            if player:
+                avg_pos = vector(0, 0)
+                for p in player:
+                    avg_pos += vector(p.rect.center)
+                avg_pos /= len(player)
+            else:
+                avg_pos = vector(SCREEN_SIZE[0] // 2, SCREEN_SIZE[1] // 2)
+        else:
+            avg_pos = vector(player.rect.center) if player else vector(SCREEN_SIZE[0] // 2, SCREEN_SIZE[1] // 2)
+        
+        self.draw(avg_pos, 1/60)

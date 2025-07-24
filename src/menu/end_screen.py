@@ -22,7 +22,7 @@ class EndScreen:
         )
         self.restart_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 180, 260, 60)
         self.menu_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 250, 260, 60)
-        self.next_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 320, 260, 60) if result == 'win' else None
+        self.next_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 320, 260, 60) if result == "win" else None
         self.button_img = import_image("src", "assets", "images", "menu", "button", "button")
         self.button_highlight = import_image("src", "assets", "images", "menu", "button", "highlighted")
         self.skeleton_img = pygame.image.load("src/assets/images/menu/skeleton.png").convert_alpha()
@@ -71,7 +71,7 @@ class EndScreen:
             self.skeletons = [s for s in self.skeletons if s["y"] < SCREEN_SIZE[1]]
 
             self.particle_spawn_timer_up += dt
-            if self.result == "win" and self.particle_spawn_timer_up >= 0.05:
+            if self.result.endswith("won") and self.particle_spawn_timer_up >= 0.05:
                 self.particles_up.append({
                     "x": random.randint(0, SCREEN_SIZE[0]),
                     "y": SCREEN_SIZE[1],
@@ -81,7 +81,7 @@ class EndScreen:
                 self.particle_spawn_timer_up = 0
 
             self.particle_spawn_timer_down += dt
-            if self.result == "win" and self.particle_spawn_timer_down >= 0.05:
+            if self.result.endswith("won") and self.particle_spawn_timer_down >= 0.05:
                 self.particles_down.append({
                     "x": random.randint(0, SCREEN_SIZE[0]),
                     "y": -20,
@@ -127,7 +127,7 @@ class EndScreen:
             for skeleton in self.skeletons:
                 self.display.blit(self.skeleton_img, (skeleton["x"], skeleton["y"]))
 
-        if self.result == "win":
+        if self.result.endswith("won"):
             for p in self.particles_up + self.particles_down:
                 img = self.particle_img.copy()
                 img.set_alpha(int(p["alpha"]))
@@ -141,9 +141,16 @@ class EndScreen:
         pygame.draw.rect(self.display, (68, 68, 68), self.panel_rect, width=6, border_radius=16)
 
         if self.flash_visible:
+            if self.result.endswith("won"):
+                text = self.result.upper()
+            elif self.result == "win":
+                text = "YOU WIN!"
+            else:
+                text = "GAME OVER!"
+
             draw_text(
                 self.display,
-                "YOU WIN!" if self.result == "win" else "GAME OVER!",
+                text,
                 self.font_large,
                 "#ffffff",
                 (self.panel_rect.centerx, self.panel_rect.y + 80),

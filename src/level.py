@@ -215,8 +215,10 @@ class Level:
     def hit_collision(self):
         for player in self.players:
             for sprite in self.damage_sprites:
-                if sprite.rect.colliderect(player.hitbox_rect):
+                offset = (sprite.rect.left - player.rect.left, sprite.rect.top - player.rect.top)
+                if pygame.sprite.collide_mask(player, sprite):
                     player.damage(knockback=False)
+
 
     def attack_collision(self):
         affected_targets = set()

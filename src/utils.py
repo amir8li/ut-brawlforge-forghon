@@ -3,10 +3,11 @@ import os
 from os import walk
 from os.path import join
 from random import randint
-
 from src.sprites import AnimatedSprite
 from src.timer import Timer
 from config import SCREEN_SIZE
+
+pygame.init()
 
 class Data:
     def __init__(self, ui, player_id=0):
@@ -35,16 +36,16 @@ class Data:
         self.ui.create_hearts(value, self.player_id)
 
 class UI:
-    def __init__(self, font, frames, mode, player_names=None):
+    def __init__(self, font, frames, mode, player_names=None, audio_files=None):
         self.display = pygame.display.get_surface()
         self.mode = mode
+        self.audio_files = audio_files
         self.heart_sprites = {0: pygame.sprite.Group(), 1: pygame.sprite.Group()}
         self.font = font
         self.name_font = pygame.font.Font(
             os.path.join("src", "assets", "images", "menu", "fonts", "runescape_uf.ttf"), 14
         )
         self.player_names = player_names if player_names else {0: "PLAYER 1", 1: "PLAYER 2"}
-
         self.heart_frames = frames["heart"]
         self.heart_width = self.heart_frames[0].get_width()
         self.heart_padding = 6
@@ -63,6 +64,9 @@ class UI:
                 x = SCREEN_SIZE[0] - 10 - self.heart_width - (heart * (self.heart_width + self.heart_padding))
                 y = 10
             Heart((x, y), self.heart_frames, self.heart_sprites[player_id])
+        if self.audio_files and 'type' in self.audio_files:
+            self.audio_files['type'].set_volume(0.5)
+            self.audio_files['type'].play()
 
     def display_text(self, player_id):
         if self.coin_timer.active:
@@ -83,23 +87,22 @@ class UI:
         name = self.player_names.get(player_id, f"PLAYER {player_id + 1}")
         shadow_color = (0, 0, 0)
         text_color = (255, 255, 255)
-
         name_surf = self.name_font.render(name, True, text_color)
         shadow_surf = self.name_font.render(name, True, shadow_color)
-
         if player_id == 0:
             x = 10
         else:
             x = SCREEN_SIZE[0] - 10 - name_surf.get_width()
-
         y = 10 + self.heart_frames[0].get_height() + 4
-
         self.display.blit(shadow_surf, (x + 2, y + 2))
         self.display.blit(name_surf, (x, y))
 
     def show_coins(self, amount, player_id):
         self.coin_amount[player_id] = amount
         self.coin_timer.activate()
+        if self.audio_files and 'type' in self.audio_files:
+            self.audio_files['type'].set_volume(0.5)
+            self.audio_files['type'].play()
 
     def update(self, dt):
         self.coin_timer.update()
@@ -110,26 +113,6 @@ class UI:
             self.display_text(player_id)
             if self.mode == "multi":
                 self.show_player_name(player_id)
-
-class Heart(AnimatedSprite):
-    def __init__(self, pos, frame, groups):
-        super().__init__(pos, frame, groups)
-        self.active = False
-
-    def animate(self, dt):
-        self.frame_index += 6 * dt
-        if self.frame_index < len(self.frames):
-            self.image = self.frames[int(self.frame_index)]
-        else:
-            self.active = False
-            self.frame_index = 0
-
-    def update(self, dt):
-        if self.active:
-            self.animate(dt)
-        else:
-            if randint(0, 1000) == 1:
-                self.active = True
 
 class Heart(AnimatedSprite):
     def __init__(self, pos, frame, groups):
@@ -211,7 +194,6 @@ def import_character_frames(*path_parts):
     base_path = os.path.join(*path_parts)
     animations = {}
     folders = [folder for folder in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, folder))]
-
     for folder in folders:
         full_path = os.path.join(base_path, folder)
         images = [
@@ -219,13 +201,11 @@ def import_character_frames(*path_parts):
             for file in sorted(os.listdir(full_path)) if file.endswith(".png")
         ]
         animations[folder] = images
-
     if "fall" not in animations:
         if "jump" in animations:
             animations["fall"] = animations["jump"][-1:]
         elif "idle" in animations:
             animations["fall"] = animations["idle"][:1]
-
     if "bullet" not in animations:
         fallback = None
         if "stop" in animations:
@@ -236,5 +216,4 @@ def import_character_frames(*path_parts):
             fallback = animations["idle"][0]
         if fallback:
             animations["bullet"] = [pygame.transform.scale(fallback, (24, 24))]
-
     return animations

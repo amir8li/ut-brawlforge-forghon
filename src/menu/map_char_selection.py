@@ -6,8 +6,8 @@ from src.utils import draw_text
 
 character_list = ["player1", "player6", "player3", "player4"]
 character_names = ["Blade Knight", "Shadow Rogue", "Fire Mage", "Thunder Viking"]
-single_maps = ["1.tmx", "2.tmx", "5.tmx", "0.tmx"]
-multi_maps = ["6.tmx", "3.tmx", "4.tmx", "7.tmx"]
+single_maps = ["1.tmx", "2.tmx", "7.tmx", "0.tmx"]
+multi_maps = ["6.tmx", "3.tmx", "4.tmx", "5.tmx"]
 map_display_names = {
     "0.tmx": "Clockwork Bay",
     "1.tmx": "Iron Spire",

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.1" orientation="orthogonal" renderorder="right-down" width="24" height="30" tilewidth="64" tileheight="64" infinite="0" nextlayerid="14" nextobjectid="194">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="24" height="30" tilewidth="64" tileheight="64" infinite="0" nextlayerid="14" nextobjectid="194">
  <tileset firstgid="1" source="../tilesets/outside.tsx"/>
  <tileset firstgid="49" source="../tilesets/items.tsx"/>
  <tileset firstgid="54" source="../tilesets/inside.tsx"/>
  <tileset firstgid="150" source="../tilesets/extra.tsx"/>
  <tileset firstgid="216" source="../tilesets/objects.tsx"/>
- <tileset firstgid="244" source="../tilesets/platforms.tsx"/>
- <tileset firstgid="252" source="../tilesets/enemies.tsx"/>
- <tileset firstgid="252" source="../tilesets/grass.tsx"/>
+ <tileset firstgid="253" source="../tilesets/platforms.tsx"/>
+ <tileset firstgid="261" source="../tilesets/enemies.tsx"/>
+ <tileset firstgid="261" source="../tilesets/grass.tsx"/>
  <layer id="9" name="BG" width="24" height="30">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -147,7 +147,7 @@
  </layer>
  <objectgroup id="4" name="Objects">
   <object id="4" name="flag" gid="219" x="1184" y="384" width="68" height="186"/>
-  <object id="15" name="player" gid="223" x="192" y="1536" width="74" height="56"/>
+  <object id="15" name="player" gid="223" x="263.528" y="418.942" width="74" height="56"/>
   <object id="88" name="saw" x="448" y="1216" width="64" height="64">
    <properties>
     <property name="speed" type="int" value="0"/>

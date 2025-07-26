@@ -8,9 +8,8 @@ PLAYER_SPEED = 6
 JUMP_HEIGHT = -700
 GRAVITY = 1300
 
-
 BULLET_SPEED = 700
-BULLET_COOLDOWN = 0.5 
+BULLET_COOLDOWN = 0.5
 BULLET_ROTATE = 500
 
 ENEMY_SPEED = 200
@@ -25,3 +24,5 @@ ZLAYERS = {
     "water": 6,
     "fg": 7
 }
+single_maps = ["1.tmx", "2.tmx", "5.tmx", "0.tmx"]
+multi_maps = ["6.tmx", "3.tmx", "4.tmx", "7.tmx"]

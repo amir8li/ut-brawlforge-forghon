@@ -10,6 +10,9 @@ class Sprite(pygame.sprite.Sprite):
         super().__init__(groups)
         self.image = surf
         self.rect = self.image.get_rect(topleft=pos)
+        #self.image = self.frames[int(self.frame_index)]
+        self.mask = pygame.mask.from_surface(self.image)
+
         self.old_rect = self.rect.copy()
         self.z = z
 
@@ -23,7 +26,8 @@ class AnimatedSprite(Sprite):
     def animate(self, dt):
         self.frame_index += self.animation_speed * dt
         self.image = self.frames[int(self.frame_index % len(self.frames))]
-    
+        self.mask = pygame.mask.from_surface(self.image)  # ← اضافه بشه!
+
     def update(self, dt):
         self.animate(dt)
 
@@ -34,17 +38,17 @@ class Item(AnimatedSprite):
         self.type = type
         self.data = data
     
-    def activate(self):
+    def activate(self, player_data):
         if self.type == "gold":
-            self.data.coins += 5
+            player_data.coins += 5
         if self.type == "silver":
-            self.data.coins += 1
+            player_data.coins += 1
         if self.type == "diamond":
-            self.data.coins += 20
+            player_data.coins += 20
         if self.type == "skull":
-            self.data.coins += 50
+            player_data.coins += 50
         if self.type == "potion":
-            self.data.health += 1
+            player_data.health += 1
 
 class ParticleEffectSprite(AnimatedSprite):
     def __init__(self, pos, frames, groups=None):

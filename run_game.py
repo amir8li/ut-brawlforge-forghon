@@ -49,7 +49,7 @@ def main():
         if not skip_loading:
             LoadingScreen(screen, audio_files).run()
         else:
-            skip_loading = False  # فقط برای یک بار از لودینگ رد بشیم
+            skip_loading = False  
 
         main_menu = MainMenu(screen, audio_files, settings)
         menu_choice = main_menu.run()

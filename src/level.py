@@ -2,16 +2,29 @@ import pygame
 import os
 from pygame import Vector2 as vector
 from random import uniform
+from math import sin
+
 from config import *
-from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite
+from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite, Flag
 from src.player import Player
 from src.groups import AllSprites
-from src.enemies import Tooth, Bombastic, Archer, IceWizard
+from src.enemies import Tooth, Bombastic, Archer, IceWizard, Boss
 from src.powerup import PowerUp
 
 class Level:
-    def __init__(self, tmx_map, level_frames, audio_files, data, powerup_locations=None):
+    def __init__(self, tmx_map, level_frames, audio_files, data, font, game=None, powerup_locations=None):
         self.data = data
+        self.font = font
+        self.game = game
+
+        self.level_width = tmx_map.width * 64
+        self.level_bottom = tmx_map.height * 64
+        tmx_level_properties = tmx_map.get_layer_by_name("Data")[0].properties
+        if tmx_level_properties["bg"]:
+            bg_tile = level_frames["bg_tiles"][tmx_level_properties["bg"]]
+        else:
+            bg_tile=None
+        self.display = pygame.display.get_surface()
         self.tmx_map = tmx_map
         self.display = pygame.display.get_surface()
         self.level_width = tmx_map.width * TILE_SIZE
@@ -37,7 +50,16 @@ class Level:
         self.item_sprites = pygame.sprite.Group()
         self.ice_wizard_sprites = pygame.sprite.Group()
         self.archer_sprites = pygame.sprite.Group()
+        self.flag_sprites = pygame.sprite.Group()
+        self.boss_sprites = pygame.sprite.Group()
 
+        self.near_flag = False
+        self.boss_fight_started = False
+        
+        self.is_boss_level = "boss" in str(tmx_map)
+
+        # Fog of war for boss fight
+        self.fog_radius = 200  # Radius of visible area around player
 
         self.initial_item_count = 0
         self.powerup_sprites = pygame.sprite.Group()
@@ -90,6 +112,16 @@ class Level:
                 anim_speed = ANIMATION_SPEED if "palm" not in obj.name else 6 + uniform(-1, 1)
                 AnimatedSprite((obj.x, obj.y), frames, groups, z, anim_speed)
 
+                                # Handle flag specially for boss fight interaction
+            if obj.name == "flag":
+                flag_sprite = Flag(
+                    pos=(obj.x + obj.width // 2, obj.y + obj.height // 2),
+                    frames=level_frames["flag"],
+                    groups=(self.all_sprites, self.flag_sprites),
+                    z=ZLAYERS["main"]
+                )
+                self.boss_start_rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
+
         if not player_positions:
             player_positions = [(100, 200), (300, 200)]
 
@@ -109,8 +141,6 @@ class Level:
             )
             self.players.append(player)
 
-            anim_speed = ANIMATION_SPEED if not "palm" in obj.name else 6 + uniform(-1, 1)
-            AnimatedSprite((obj.x, obj.y), frames, groups, z, anim_speed)
 
         # enemies
         for obj in tmx_map.get_layer_by_name("Enemies"):
@@ -123,6 +153,12 @@ class Level:
             elif obj.name == "ice wizard":
                 frames = level_frames["ice_wizard"]
                 IceWizard((obj.x, obj.y), frames, (self.all_sprites, self.damage_sprites, self.ice_wizard_sprites), self.players[0], audio_files)
+            
+        if self.is_boss_level:
+            # Spawn boss in the center of the level
+            boss_x = (tmx_map.width * TILE_SIZE) // 2
+            boss_y = (tmx_map.height * TILE_SIZE) // 2 - 100
+            Boss((boss_x, boss_y), (self.all_sprites, self.damage_sprites, self.boss_sprites), self.players[0])
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
@@ -255,6 +291,15 @@ class Level:
                 if target not in self.players[0].attacked_enemies:
                     target.take_damage()
                     self.players[0].attacked_enemies.append(target)
+
+        # Boss attack collision
+        for target in self.boss_sprites.sprites():
+            facing_target = (self.players[0].rect.centerx < target.rect.centerx and self.players[0].face_right) or \
+                            (self.players[0].rect.centerx > target.rect.centerx and not self.players[0].face_right)
+
+            if target.hitbox_rect.colliderect(self.players[0].rect) and self.players[0].attacking and facing_target:
+                target.take_damage()
+    
         for player in self.players:
             for sprite in self.damage_sprites:
                 offset = (sprite.rect.left - player.rect.left, sprite.rect.top - player.rect.top)
@@ -306,11 +351,10 @@ class Level:
             return f"{alive[0].data.name} won"
         if len(self.item_sprites) == 0 and self.initial_item_count > 0 and not self.multiplayer:
             return "win"
-
+        
     def spawn_powerups(self):
         map_name = os.path.basename(self.tmx_map.filename)
         powerup_types = self.level_frames["powerups"]
-
         durations = {
             "double_jump": 10000,
             "magic": 8000,
@@ -325,6 +369,103 @@ class Level:
                 powerup = PowerUp(power_type, pos, image, duration=durations.get(power_type, 8000))
                 self.powerup_sprites.add(powerup)
                 self.all_sprites.add(powerup)
+                
+    def flag_interaction(self):
+        if self.flag_sprites and not self.boss_fight_started:
+            flag = self.flag_sprites.sprites()[0]  # Assuming one flag per level
+            # Use the first player for single player mode
+            player = self.players[0]
+            # Check if player is close enough to interact
+            self.near_flag = flag.can_interact(player.hitbox_rect)
+
+            
+    def start_boss_fight(self):
+        if not self.boss_fight_started and self.game:
+            self.boss_fight_started = True
+            print("Switching to boss level...")
+            self.game.switch_to_boss_level()
+            return True
+        return False
+
+    def handle_events(self, events):
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    if self.near_flag and not self.boss_fight_started:
+                        # Player clicked while near flag
+                        if self.flag_sprites:
+                            flag = self.flag_sprites.sprites()[0]
+                            if flag.interact():
+                                self.start_boss_fight()
+
+    def draw_ui_elements(self):
+        if self.near_flag and not self.boss_fight_started:
+            pulse = abs(sin(pygame.time.get_ticks() * 0.005)) * 0.3 + 0.7  # Pulse between 0.7 and 1.0
+            
+            gold_color = (int(255 * pulse), int(215 * pulse), 0)
+            shadow_color = (int(139 * pulse), int(69 * pulse), int(19 * pulse))
+            
+            text = self.font.render("Click to start Boss Fight!", True, gold_color)
+            text_rect = text.get_rect(center=(self.display.get_width() // 2, 50))
+            
+            shadow_text = self.font.render("Click to start Boss Fight!", True, shadow_color)
+            shadow_rect = shadow_text.get_rect(center=(self.display.get_width() // 2 + 2, 52))
+            
+            self.display.blit(shadow_text, shadow_rect)
+            self.display.blit(text, text_rect)
+
+
+    def draw_boss_health(self):
+        if self.boss_sprites:
+            boss = self.boss_sprites.sprites()[0]
+            # Draw health bar at the top of the screen
+            bar_width = 400
+            bar_height = 20
+            bar_x = (self.display.get_width() - bar_width) // 2
+            bar_y = 20
+            
+            # Background bar
+            pygame.draw.rect(self.display, (100, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+            
+            # Health bar
+            health_percentage = boss.health / boss.max_health
+            health_width = int(bar_width * health_percentage)
+            pygame.draw.rect(self.display, (200, 0, 0), (bar_x, bar_y, health_width, bar_height))
+            
+            # Border
+            pygame.draw.rect(self.display, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 2)
+            
+            # Boss name
+            boss_text = self.font.render("BOSS", True, (255, 255, 255))
+            boss_rect = boss_text.get_rect(center=(self.display.get_width() // 2, bar_y - 15))
+            self.display.blit(boss_text, boss_rect)
+
+    def draw_fog_of_war(self):
+        if self.is_boss_level:
+            # Create a surface for the fog effect
+            fog_surface = pygame.Surface((self.display.get_width(), self.display.get_height()), pygame.SRCALPHA)
+            
+            # Get player's screen position
+            camera_offset = self.all_sprites.offset
+            player_screen_pos = (
+                int(self.players[0].hitbox_rect.centerx + camera_offset.x),
+                int(self.players[0].hitbox_rect.centery + camera_offset.y)
+            )
+            
+            # Fill the entire screen with a dark color
+            fog_surface.fill((0, 0, 0, 220))
+
+            # Create a gradient effect for a soft edge
+            for i in range(60):
+                radius = self.fog_radius - i * 3
+                alpha = 220 - i * 3.5
+                if radius > 0 and alpha > 0:
+                    pygame.draw.circle(fog_surface, (0,0,0,alpha), player_screen_pos, radius)
+
+            # Blit the fog surface onto the display
+            self.display.blit(fog_surface, (0, 0))
+
+
 
 
     def update(self, dt):
@@ -335,11 +476,16 @@ class Level:
         self.attack_collision()
         self.bullet_collision()
         self.powerup_collision()
+        self.check_constraint()
+        self.flag_interaction()
 
-        # self.all_sprites.draw(self.player.hitbox_rect.center, dt)
+        self.all_sprites.draw(self.players[0].hitbox_rect.center, dt)
 
     def draw(self, surface):
         self.all_sprites.custom_draw(self.players[0] if len(self.players) == 1 else self.players)
+        self.draw_ui_elements()
+        self.draw_boss_health()
+        self.draw_fog_of_war()
         for player in self.players:
             player.draw_shield(surface)
         

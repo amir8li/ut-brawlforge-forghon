@@ -25,9 +25,9 @@ class Game:
         if self.mode and self.selected_map and self.selected_hero:
             self.import_assets()
             if self.mode == "multi" and self.player_names and len(self.player_names) >= 2:
-                names = {0: self.player_names[0], 1: self.player_names[1]}
+                names = {i: name for i, name in enumerate(self.player_names)}
             else:
-                names = None
+                names = {0: self.player_names[0]} if self.player_names else None
             self.ui = UI(self.font, self.ui_frames, self.mode, player_names=names, audio_files=self.audio_files)
             self.data = [Data(self.ui, i) for i in range(2 if self.mode == "multi" else 1)]
             if self.mode == "multi":
@@ -45,9 +45,17 @@ class Game:
                 self.data,
                 self.powerup_locations
             )
-            self.bg_sound = self.audio_files['bg']
-            self.bg_sound.set_volume(self.music_volume)
-            self.bg_sound.play(-1)
+
+        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data, self.font, self)
+        self.bg_sound = self.audio_files['bg']
+        self.bg_sound.set_volume(self.music_volume)
+        self.bg_sound.play(-1)
+
+        # Always pass player_names as a dict to UI
+        # (Removed duplicate UI creation to fix heart display)
+        self.tmx_maps = {
+            "boss": load_pygame("./data/levels/boss.tmx")
+        }
 
     @staticmethod
     def load_settings():
@@ -169,7 +177,9 @@ class Game:
         running = True
         while running:
             dt = self.clock.tick(FPS) / 1000
-            for event in pygame.event.get():
+            
+            events = pygame.event.get()
+            for event in events:
                 if event.type == pygame.QUIT:
                     self.bg_sound.stop()
                     running = False
@@ -181,10 +191,8 @@ class Game:
             self.screen.fill("#91a7d0")
             self.current_stage.draw(self.screen)
             
-            # Draw names above Tooth enemies
-            for tooth in self.current_stage.tooth_sprites:
-                tooth.draw_name(self.screen, self.current_stage.all_sprites.offset)
-            
+            self.current_stage.handle_events(events)
+            # self.current_stage.run(dt)
             self.ui.update(dt)
             pygame.display.flip()
 
@@ -192,3 +200,13 @@ class Game:
             if result in ["win", "gameover"] or (result is not None and result.endswith("won")):
                 self.bg_sound.stop()
                 return result
+
+    def switch_to_boss_level(self):
+        # Ensure data is always a list for Level
+        data = self.data if isinstance(self.data, list) else [self.data]
+        # Ensure each Data object has a name attribute
+        if hasattr(self, 'player_names') and self.player_names:
+            for i, d in enumerate(data):
+                if not hasattr(d, 'name') or d.name is None:
+                    d.name = self.player_names[i] if i < len(self.player_names) else f"player{i+1}"
+        self.current_stage = Level(self.tmx_maps["boss"], self.level_frames, self.audio_files, data, self.font, self)

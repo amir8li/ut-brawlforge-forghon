@@ -146,7 +146,6 @@
 </data>
  </layer>
  <objectgroup id="4" name="Objects">
-  <object id="4" name="flag" gid="232" x="1184" y="384" width="68" height="186"/>
   <object id="15" name="player" gid="236" x="283.475" y="486.94" width="74" height="56"/>
   <object id="91" name="saw" x="960" y="1536" width="64" height="64">
    <properties>

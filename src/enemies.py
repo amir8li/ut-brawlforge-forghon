@@ -40,11 +40,6 @@ class Tooth(pygame.sprite.Sprite):
             self.hitbox_rect.center = self.rect.center
 
         self.hit_timer = Timer(350)
-        self.name = "Tooth"
-        # Font for name display
-        self.font = pygame.font.Font(None, 24)
-        self.name_surface = self.font.render(self.name, True, (0, 0, 0))  # Black text
-        self.name_rect = self.name_surface.get_rect()
 
         self.health = 2  
         self.dead = False
@@ -53,19 +48,6 @@ class Tooth(pygame.sprite.Sprite):
         self.death_sound_played = False
         self.death_timer = Timer(400)
         
-    def draw_name(self, display_surface, offset):
-        name_x = self.rect.centerx - self.name_rect.width // 2 + offset[0]
-        name_y = self.rect.top - 25 + offset[1]  
-        self.name_rect.topleft = (name_x, name_y)
-        
-        bg_rect = self.name_rect.inflate(8, 4) 
-        
-        temp_surface = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
-        pygame.draw.rect(temp_surface, (255, 255, 255, 200), temp_surface.get_rect(), border_radius=6)  # White background
-        display_surface.blit(temp_surface, bg_rect)
-        
-        display_surface.blit(self.name_surface, self.name_rect)
-
     def take_damage(self):
         if not self.dead:
             self.health -= 1
@@ -495,3 +477,77 @@ class IceWizard(pygame.sprite.Sprite):
         self.attack_timer = Timer(400)
         self.attack_timer.activate()
         self.frame_index = 0
+
+class Boss(pygame.sprite.Sprite):
+    def __init__(self, pos, groups, player):
+        super().__init__(groups)
+        self.player = player
+        
+        # Create a simple rectangle boss
+        self.image = pygame.Surface((128, 128))
+        self.image.fill((150, 0, 0))  # Dark red color
+        self.rect = self.image.get_rect(center=pos)
+        self.hitbox_rect = self.rect.inflate(-20, -20)
+        self.z = ZLAYERS["main"]
+        
+        # Boss stats
+        self.health = 100
+        self.max_health = 100
+        self.speed = 100
+        self.damage = 2
+        
+        # Movement
+        self.direction = vector(1, 0)
+        self.move_timer = 0
+        self.attack_timer = Timer(3000)  # Attack every 3 seconds
+        
+        # Visual feedback
+        self.hit_timer = Timer(200)
+        
+    def update(self, dt):
+        self.hit_timer.update()
+        self.attack_timer.update()
+
+        self.move_timer += dt
+        if self.move_timer > 2.0:
+            self.direction.x *= -1
+            self.move_timer = 0
+
+        self.rect.x += self.direction.x * self.speed * dt
+        
+        # Keep boss within bounds
+        if self.rect.left < 100:
+            self.rect.left = 100
+            self.direction.x = 1
+        elif self.rect.right > 2400:
+            self.rect.right = 2400
+            self.direction.x = -1
+            
+        self.hitbox_rect.center = self.rect.center
+        
+        # Simple attack pattern
+        if not self.attack_timer.active:
+            self.attack()
+            self.attack_timer.activate()
+            
+        # Visual feedback when hit
+        if self.hit_timer.active:
+            self.image.fill((255, 100, 100))  # Light red when hit
+        else:
+            self.image.fill((150, 0, 0))  # Normal dark red
+            
+    def attack(self):
+        distance = vector(self.rect.center) - vector(self.player.rect.center)
+        if distance.length() < 300:  # Attack range
+            self.player.damage()
+            print("Boss attacks!")
+            
+    def take_damage(self, damage=10):
+        if not self.hit_timer.active:
+            self.health -= damage
+            self.hit_timer.activate()
+            print(f"Boss health: {self.health}/{self.max_health}")
+            
+            if self.health <= 0:
+                self.kill()
+                print("Boss defeated!")

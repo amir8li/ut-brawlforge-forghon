@@ -3,6 +3,7 @@ import os
 from pygame import Vector2 as vector
 from random import uniform
 from math import sin
+from itertools import chain
 
 from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite, Flag
@@ -44,6 +45,7 @@ class Level:
 
         self.collision_sprites = pygame.sprite.Group()
         self.semi_collision_sprites = pygame.sprite.Group()
+        self.platform_sprites_for_enemies = pygame.sprite.Group()
         self.damage_sprites = pygame.sprite.Group()
         self.tooth_sprites = pygame.sprite.Group()
         self.bombastic_sprites = pygame.sprite.Group()
@@ -78,7 +80,9 @@ class Level:
             for x, y, surf in tmx_map.get_layer_by_name(layer).tiles():
                 groups = [self.all_sprites]
                 if layer == "Terrain": groups.append(self.collision_sprites)
-                elif layer == "Platforms": groups.append(self.semi_collision_sprites)
+                elif layer == "Platforms":
+                    groups.append(self.semi_collision_sprites)
+                    groups.append(self.platform_sprites_for_enemies)
                 match layer:
                     case "BG": z = ZLAYERS["bg tiles"]
                     case "FG": z = ZLAYERS["fg"]
@@ -143,13 +147,14 @@ class Level:
 
 
         # enemies
+        all_collision_sprites = pygame.sprite.Group(chain(self.collision_sprites.sprites(), self.platform_sprites_for_enemies.sprites()))
         for obj in tmx_map.get_layer_by_name("Enemies"):
             if obj.name == "tooth":
-                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), self.collision_sprites, audio_files, self.players[0])
+                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), all_collision_sprites, audio_files, self.players[0])
             elif obj.name == "bombastic":
                 Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.players[0], audio_files)
             elif obj.name == "archer":
-                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites, self.archer_sprites), self.collision_sprites, self.players[0], audio_files)
+                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites, self.archer_sprites), all_collision_sprites, self.players[0], audio_files)
             elif obj.name == "ice wizard":
                 frames = level_frames["ice_wizard"]
                 IceWizard((obj.x, obj.y), frames, (self.all_sprites, self.damage_sprites, self.ice_wizard_sprites), self.players[0], audio_files)
@@ -479,6 +484,12 @@ class Level:
         self.check_constraint()
         self.flag_interaction()
 
+        if self.is_boss_level:
+            if len(self.tooth_sprites) == 0 :
+                if self.game:
+                    self.game.switch_to_boss_level(next_boss=True)
+                return  
+
         self.all_sprites.draw(self.players[0].hitbox_rect.center, dt)
 
     def draw(self, surface):
@@ -488,5 +499,5 @@ class Level:
         self.draw_fog_of_war()
         for player in self.players:
             player.draw_shield(surface)
-        
-            
+
+

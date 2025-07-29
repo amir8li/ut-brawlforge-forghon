@@ -56,6 +56,16 @@ class Game:
         self.tmx_maps = {
             "boss": load_pygame("./data/levels/boss.tmx")
         }
+        self.boss_maps = [
+            "boss.tmx",
+            "boss 2.tmx",
+            "boss 3.tmx",
+            "boss 4.tmx"
+        ]
+        self.current_boss_index = 0
+        self.tmx_maps = {
+            name: load_pygame(f"./data/levels/{name}") for name in self.boss_maps
+        }
 
     @staticmethod
     def load_settings():
@@ -201,12 +211,25 @@ class Game:
                 self.bg_sound.stop()
                 return result
 
-    def switch_to_boss_level(self):
-        # Ensure data is always a list for Level
+    def switch_to_boss_level(self, next_boss=False):
+        if next_boss:
+            self.current_boss_index += 1
+        if self.current_boss_index >= len(self.boss_maps):
+            print("All bosses defeated! Game complete!")
+            # You can trigger a win screen here
+            return
+        boss_map_name = self.boss_maps[self.current_boss_index]
         data = self.data if isinstance(self.data, list) else [self.data]
         # Ensure each Data object has a name attribute
         if hasattr(self, 'player_names') and self.player_names:
             for i, d in enumerate(data):
                 if not hasattr(d, 'name') or d.name is None:
                     d.name = self.player_names[i] if i < len(self.player_names) else f"player{i+1}"
-        self.current_stage = Level(self.tmx_maps["boss"], self.level_frames, self.audio_files, data, self.font, self)
+        self.current_stage = Level(
+            self.tmx_maps[boss_map_name],
+            self.level_frames,
+            self.audio_files,
+            data,
+            self.font,
+            self
+        )

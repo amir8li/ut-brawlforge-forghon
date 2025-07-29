@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.10" tiledversion="1.11.2" name="objects" tilewidth="653" tileheight="581" tilecount="30" columns="0">
+<tileset version="1.10" tiledversion="1.11.2" name="objects" tilewidth="653" tileheight="581" tilecount="31" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="0">
   <image source="../../src/assets/images/objects/barrel.png" width="46" height="50"/>
@@ -90,5 +90,8 @@
  </tile>
  <tile id="36">
   <image source="../../src/assets/images/enemies/archer/Idle.png" width="653" height="581"/>
+ </tile>
+ <tile id="37">
+  <image source="../../src/assets/images/enemies/ice wizard/Idle/0.png" width="90" height="75"/>
  </tile>
 </tileset>

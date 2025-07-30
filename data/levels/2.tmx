@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="24" height="30" tilewidth="64" tileheight="64" infinite="0" nextlayerid="14" nextobjectid="194">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="24" height="30" tilewidth="64" tileheight="64" infinite="0" nextlayerid="14" nextobjectid="199">
  <tileset firstgid="1" source="../tilesets/outside.tsx"/>
  <tileset firstgid="49" source="../tilesets/items.tsx"/>
  <tileset firstgid="54" source="../tilesets/inside.tsx"/>
  <tileset firstgid="150" source="../tilesets/extra.tsx"/>
  <tileset firstgid="216" source="../tilesets/objects.tsx"/>
- <tileset firstgid="253" source="../tilesets/platforms.tsx"/>
- <tileset firstgid="261" source="../tilesets/enemies.tsx"/>
- <tileset firstgid="261" source="../tilesets/grass.tsx"/>
+ <tileset firstgid="254" source="../tilesets/platforms.tsx"/>
+ <tileset firstgid="262" source="../tilesets/enemies.tsx"/>
+ <tileset firstgid="262" source="../tilesets/grass.tsx"/>
  <layer id="9" name="BG" width="24" height="30">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -147,7 +147,7 @@
  </layer>
  <objectgroup id="4" name="Objects">
   <object id="4" name="flag" gid="219" x="1184" y="384" width="68" height="186"/>
-  <object id="15" name="player" gid="223" x="263.528" y="418.942" width="74" height="56"/>
+  <object id="15" name="player" gid="223" x="257.44" y="843.546" width="74" height="56"/>
   <object id="88" name="saw" x="448" y="1216" width="64" height="64">
    <properties>
     <property name="speed" type="int" value="0"/>
@@ -332,7 +332,13 @@
   <object id="185" name="silver" gid="52" x="256" y="1024" width="64" height="64"/>
   <object id="186" name="silver" gid="52" x="320" y="640" width="64" height="64"/>
  </objectgroup>
- <objectgroup id="6" name="Enemies"/>
+ <objectgroup id="6" name="Enemies">
+  <object id="194" name="tooth" gid="225" x="1070.23" y="1533.88" width="48" height="46"/>
+  <object id="195" name="tooth" gid="225" x="453.869" y="701.413" width="48" height="46"/>
+  <object id="196" name="archer" gid="2147483900" x="1052.71" y="1092.41" width="80" height="98"/>
+  <object id="197" name="archer" gid="2147483900" x="434.826" y="325.382" width="80" height="98"/>
+  <object id="198" name="ice wizard" gid="253" x="776.814" y="823.882" width="90" height="75"/>
+ </objectgroup>
  <objectgroup id="2" name="Water"/>
  <objectgroup id="8" name="Data">
   <object id="28" name="Data" x="0" y="0" width="64" height="64">

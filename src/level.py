@@ -160,10 +160,10 @@ class Level:
                 IceWizard((obj.x, obj.y), frames, (self.all_sprites, self.damage_sprites, self.ice_wizard_sprites), self.players[0], audio_files)
             
         if self.is_boss_level:
-            # Spawn boss in the center of the level
-            boss_x = (tmx_map.width * TILE_SIZE) // 2
-            boss_y = (tmx_map.height * TILE_SIZE) // 2 - 100
-            Boss((boss_x, boss_y), (self.all_sprites, self.damage_sprites, self.boss_sprites), self.players[0])
+            if os.path.basename(tmx_map.filename) == "boss 5.tmx":
+                boss_x = (tmx_map.width * TILE_SIZE) // 2
+                boss_y = (tmx_map.height * TILE_SIZE) // 2 - 100
+                Boss((boss_x, boss_y), (self.all_sprites, self.damage_sprites, self.boss_sprites), self.players[0])
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
@@ -335,7 +335,8 @@ class Level:
                         player.rect.centerx > target.rect.centerx and not player.face_right
                     )
                     if target.rect.colliderect(player.rect) and player.attacking and facing_target:
-                        target.reverse()
+                        if hasattr(target, 'reverse') and callable(getattr(target, 'reverse')):
+                            target.reverse()
 
     def bullet_collision(self):
         for i, attacker in enumerate(self.players):

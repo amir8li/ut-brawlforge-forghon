@@ -51,16 +51,17 @@ class Game:
         self.bg_sound.set_volume(self.music_volume)
         self.bg_sound.play(-1)
 
-        # Always pass player_names as a dict to UI
-        # (Removed duplicate UI creation to fix heart display)
-        self.tmx_maps = {
-            "boss": load_pygame("./data/levels/boss.tmx")
-        }
+        # # Always pass player_names as a dict to UI
+        # # (Removed duplicate UI creation to fix heart display)
+        # self.tmx_maps = {
+        #     "boss": load_pygame("./data/levels/boss 5.tmx")
+        # }
         self.boss_maps = [
-            "boss.tmx",
+            "boss 1.tmx",
             "boss 2.tmx",
             "boss 3.tmx",
-            "boss 4.tmx"
+            "boss 4.tmx",
+            "boss 5.tmx",
         ]
         self.current_boss_index = 0
         self.tmx_maps = {
@@ -214,10 +215,6 @@ class Game:
     def switch_to_boss_level(self, next_boss=False):
         if next_boss:
             self.current_boss_index += 1
-        if self.current_boss_index >= len(self.boss_maps):
-            print("All bosses defeated! Game complete!")
-            # You can trigger a win screen here
-            return
         boss_map_name = self.boss_maps[self.current_boss_index]
         data = self.data if isinstance(self.data, list) else [self.data]
         # Ensure each Data object has a name attribute

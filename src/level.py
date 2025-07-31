@@ -269,7 +269,7 @@ class Level:
                 if powerup.power_type == "double_jump":
                     player.enable_double_jump()
                 elif powerup.power_type == "magic":
-                    player.boost_damage()  
+                    player.buff_damage()  
                 elif powerup.power_type == "shield":
                     player.activate_shield()
                 

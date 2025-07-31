@@ -14,6 +14,7 @@ from src.powerup import PowerUp
 
 class Level:
     def __init__(self, tmx_map, level_frames, audio_files, data, font, game=None, powerup_locations=None):
+        print("level:", tmx_map.filename)
         self.data = data
         self.font = font
         self.game = game
@@ -485,7 +486,7 @@ class Level:
         self.check_constraint()
         self.flag_interaction()
 
-        if self.is_boss_level:
+        if self.is_boss_level and not self.tmx_map.filename.endswith("boss 5.tmx"):
             if len(self.tooth_sprites) == 0 :
                 if self.game:
                     self.game.switch_to_boss_level(next_boss=True)

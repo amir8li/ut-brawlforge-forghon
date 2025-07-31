@@ -1,5 +1,7 @@
 import pygame
 import random
+import sys
+from os.path import join
 from config import SCREEN_SIZE, FPS
 from src.utils import import_image, draw_text
 
@@ -10,8 +12,8 @@ class EndScreen:
         self.result = result
         self.settings = settings
         self.clock = pygame.time.Clock()
-        self.font_large = pygame.font.Font("src/assets/images/ui/runescape_uf.ttf", 72)
-        self.font_medium = pygame.font.Font("src/assets/images/ui/runescape_uf.ttf", 40)
+        self.font_large = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 72)
+        self.font_medium = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 40)
         self.background = background_surface
         self.overlay = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)
         self.overlay.fill((0, 0, 0, 180))
@@ -22,12 +24,20 @@ class EndScreen:
             self.panel_width,
             self.panel_height
         )
-        self.restart_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 180, 260, 60)
-        self.menu_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 250, 260, 60)
-        self.next_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 320, 260, 60) if result == "win" else None
+
+        # منطق جدید برای تعریف دکمه‌ها
+        if self.result == "final_victory":
+            self.restart_rect = None
+            self.next_rect = None
+            self.menu_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 250, 260, 60)
+        else:
+            self.restart_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 180, 260, 60)
+            self.menu_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 250, 260, 60)
+            self.next_rect = pygame.Rect(self.panel_rect.centerx - 130, self.panel_rect.y + 320, 260, 60) if self.result == "win" else None
+
         self.button_img = import_image("src", "assets", "images", "menu", "button", "button")
         self.button_highlight = import_image("src", "assets", "images", "menu", "button", "highlighted")
-        self.skeleton_img = pygame.image.load("src/assets/images/menu/skeleton.png").convert_alpha()
+        self.skeleton_img = pygame.image.load(join("src", "assets", "images", "menu", "skeleton.png")).convert_alpha()
         self.skeleton_img = pygame.transform.scale(self.skeleton_img, (
             self.skeleton_img.get_width() // 2,
             self.skeleton_img.get_height() // 2
@@ -44,12 +54,12 @@ class EndScreen:
         self.flash_timer = 0
         self.flash_visible = True
 
-        # ✅ پخش صدا فقط یک‌بار
-        if result == "win" or result.endswith("won"):
+        # منطق جدید برای پخش صدای پیروزی
+        if self.result in ("win", "final_victory") or (isinstance(self.result, str) and self.result.endswith("won")):
             if 'win' in self.audio_files:
                 self.audio_files['win'].set_volume(0.7)
                 self.audio_files['win'].play()
-        elif result == "gameover":
+        elif self.result == "gameover":
             if 'gameover' in self.audio_files:
                 self.audio_files['gameover'].set_volume(0.7)
                 self.audio_files['gameover'].play()
@@ -84,7 +94,9 @@ class EndScreen:
 
             self.particle_spawn_timer_up += dt
             self.particle_spawn_timer_down += dt
-            if self.result.endswith("won"):
+            
+            # انیمیشن پارتیکل برای هر نوع پیروزی
+            if self.result in ("win", "final_victory") or (isinstance(self.result, str) and self.result.endswith("won")):
                 if self.particle_spawn_timer_up >= 0.05:
                     self.particles_up.append({
                         "x": random.randint(0, SCREEN_SIZE[0]),
@@ -115,26 +127,20 @@ class EndScreen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
-                    exit()
+                    sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if self.restart_rect.collidepoint(event.pos):
-                        if 'click' in self.audio_files:
-                            self.audio_files['click'].set_volume(0.7)
-                            self.audio_files['click'].play()
+                    if self.restart_rect and self.restart_rect.collidepoint(event.pos):
+                        if 'click' in self.audio_files: self.audio_files['click'].play()
                         self.stop_end_audio()
                         choice = "restart"
                         running = False
-                    elif self.menu_rect.collidepoint(event.pos):
-                        if 'click' in self.audio_files:
-                            self.audio_files['click'].set_volume(0.7)
-                            self.audio_files['click'].play()
+                    elif self.menu_rect and self.menu_rect.collidepoint(event.pos):
+                        if 'click' in self.audio_files: self.audio_files['click'].play()
                         self.stop_end_audio()
                         choice = "menu"
                         running = False
                     elif self.next_rect and self.next_rect.collidepoint(event.pos):
-                        if 'click' in self.audio_files:
-                            self.audio_files['click'].set_volume(0.7)
-                            self.audio_files['click'].play()
+                        if 'click' in self.audio_files: self.audio_files['click'].play()
                         self.stop_end_audio()
                         choice = "next"
                         running = False
@@ -145,8 +151,7 @@ class EndScreen:
         return choice
 
     def stop_end_audio(self):
-        # ✅ توقف صدا فقط هنگام خروج از صفحه
-        if self.result == "win" or self.result.endswith("won"):
+        if self.result in ("win", "final_victory") or (isinstance(self.result, str) and self.result.endswith("won")):
             if 'win' in self.audio_files:
                 self.audio_files['win'].stop()
         elif self.result == "gameover":
@@ -158,7 +163,8 @@ class EndScreen:
         if self.result == "gameover":
             for skeleton in self.skeletons:
                 self.display.blit(self.skeleton_img, (skeleton["x"], skeleton["y"]))
-        if self.result.endswith("won") or self.result == "win":
+        
+        if self.result in ("win", "final_victory") or (isinstance(self.result, str) and self.result.endswith("won")):
             for p in self.particles_up + self.particles_down:
                 img = self.particle_img.copy()
                 img.set_alpha(int(p["alpha"]))
@@ -171,7 +177,15 @@ class EndScreen:
         pygame.draw.rect(self.display, (68, 68, 68), self.panel_rect, width=6, border_radius=16)
 
         if self.flash_visible:
-            text = "YOU WIN!" if self.result == "win" else "GAME OVER!" if self.result == "gameover" else f"{self.result.upper()}!"
+            if self.result == "final_victory":
+                text = "VICTORY!"
+            elif self.result == "win":
+                text = "YOU WIN!"
+            elif self.result == "gameover":
+                text = "GAME OVER!"
+            else:
+                text = f"{self.result.upper()}!"
+            
             draw_text(
                 self.display,
                 text,
@@ -180,9 +194,11 @@ class EndScreen:
                 (self.panel_rect.centerx, self.panel_rect.y + 80),
                 shadow=True
             )
-
-        self.draw_button(self.restart_rect, "Restart")
-        self.draw_button(self.menu_rect, "Menu")
+        
+        if self.restart_rect:
+            self.draw_button(self.restart_rect, "Restart")
+        if self.menu_rect:
+            self.draw_button(self.menu_rect, "Menu")
         if self.next_rect:
             self.draw_button(self.next_rect, "Next Level")
 

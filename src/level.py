@@ -13,11 +13,12 @@ from src.enemies import Tooth, Bombastic, Archer, IceWizard, Boss
 from src.powerup import PowerUp
 
 class Level:
-    def __init__(self, tmx_map, level_frames, audio_files, data, font, game=None, powerup_locations=None):
+    def __init__(self, tmx_map, level_frames, audio_files, data, font, game=None, powerup_locations=None, current_level=1):
         self.data = data
         self.font = font
         self.game = game
-
+        self.current_level = current_level
+        self.is_boss_level = "boss" in str(tmx_map.filename).lower() if hasattr(tmx_map, 'filename') and tmx_map.filename else False
         self.level_width = tmx_map.width * 64
         self.level_bottom = tmx_map.height * 64
         tmx_level_properties = tmx_map.get_layer_by_name("Data")[0].properties
@@ -42,7 +43,7 @@ class Level:
             tmx_map.width, tmx_map.height,
             clouds_dict, tmx_level_properties["horizon_line"], bg_tile
         )
-
+        self.enemy_sprites = pygame.sprite.Group()
         self.collision_sprites = pygame.sprite.Group()
         self.semi_collision_sprites = pygame.sprite.Group()
         self.platform_sprites_for_enemies = pygame.sprite.Group()
@@ -71,9 +72,6 @@ class Level:
         self.players = []
 
         self.setup(tmx_map, level_frames, audio_files)
-
-        if self.multiplayer:
-            self.spawn_powerups()
 
     def setup(self, tmx_map, level_frames, audio_files):
         for layer in ["BG", "Terrain", "FG", "Platforms"]:
@@ -149,21 +147,34 @@ class Level:
         # enemies
         all_collision_sprites = pygame.sprite.Group(chain(self.collision_sprites.sprites(), self.platform_sprites_for_enemies.sprites()))
         for obj in tmx_map.get_layer_by_name("Enemies"):
+            player_to_follow = self.players[0]
             if obj.name == "tooth":
-                Tooth((obj.x, obj.y), level_frames["tooth"], (self.all_sprites, self.damage_sprites, self.tooth_sprites), all_collision_sprites, audio_files, self.players[0])
+                Tooth(pos=(obj.x, obj.y), frames=level_frames["tooth"], groups=(self.all_sprites, self.damage_sprites, self.tooth_sprites, self.enemy_sprites), collision_sprites=all_collision_sprites, player=player_to_follow, sounds=audio_files)
             elif obj.name == "bombastic":
-                Bombastic((obj.x, obj.y), level_frames["bombastic"], level_frames["bombastic_explosion"], level_frames["bombastic_dead"], (self.all_sprites, self.damage_sprites, self.bombastic_sprites), self.players[0], audio_files)
+                Bombastic(pos=(obj.x, obj.y), frames=level_frames["bombastic"], explosion_frames=level_frames["bombastic_explosion"], dead_frames=level_frames["bombastic_dead"], groups=(self.all_sprites, self.damage_sprites, self.bombastic_sprites, self.enemy_sprites), player=player_to_follow, sounds=audio_files)
             elif obj.name == "archer":
-                Archer((obj.x, obj.y), level_frames["archer"], (self.all_sprites, self.damage_sprites, self.archer_sprites), all_collision_sprites, self.players[0], audio_files)
+                Archer(pos=(obj.x, obj.y), frames=level_frames["archer"], groups=(self.all_sprites, self.damage_sprites, self.archer_sprites, self.enemy_sprites), collision_sprites=all_collision_sprites, player=player_to_follow, sounds=audio_files)
             elif obj.name == "ice wizard":
-                frames = level_frames["ice_wizard"]
-                IceWizard((obj.x, obj.y), frames, (self.all_sprites, self.damage_sprites, self.ice_wizard_sprites), self.players[0], audio_files)
-            
+                IceWizard(pos=(obj.x, obj.y), frames=level_frames["ice_wizard"], groups=(self.all_sprites, self.damage_sprites, self.ice_wizard_sprites, self.enemy_sprites), player=player_to_follow, sounds=audio_files)
         if self.is_boss_level:
             if os.path.basename(tmx_map.filename) == "boss 5.tmx":
                 boss_x = (tmx_map.width * TILE_SIZE) // 2
                 boss_y = (tmx_map.height * TILE_SIZE) // 2 - 100
                 Boss((boss_x, boss_y), (self.all_sprites, self.damage_sprites, self.boss_sprites), self.players[0])
+
+        self.initial_enemy_count = len(self.enemy_sprites)
+
+        if self.multiplayer and tmx_map.get_layer_by_name("powerups"):
+            for obj in tmx_map.get_layer_by_name("powerups"):
+                power_type = obj.name
+                if power_type in level_frames["powerups"]:
+                    surf = level_frames["powerups"][power_type]
+                    PowerUp(
+                        pos=(obj.x + obj.width / 2, obj.y + obj.height / 2),
+                        power_type=power_type,
+                        surf=surf,
+                        groups=[self.all_sprites, self.powerup_sprites]
+                    )
 
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
@@ -253,16 +264,19 @@ class Level:
 
     def powerup_collision(self):
         for player in self.players:
-            collided = pygame.sprite.spritecollide(player, self.powerup_sprites, True)
-            for p in collided:
-                if p.power_type == "double_jump":
+            collided_powerups = pygame.sprite.spritecollide(player, self.powerup_sprites, True)
+            for powerup in collided_powerups:
+                if powerup.power_type == "double_jump":
                     player.enable_double_jump()
-                elif p.power_type == "magic":
-                    player.buff_damage()
-                elif p.power_type == "shield":
+                elif powerup.power_type == "magic":
+                    player.boost_damage()  
+                elif powerup.power_type == "shield":
                     player.activate_shield()
-                ParticleEffectSprite(p.rect.center, self.level_frames["particle"], self.all_sprites)
-                self.audio_files["coin"].play()
+                
+                if 'particle' in self.level_frames:
+                    ParticleEffectSprite(powerup.rect.center, self.level_frames['particle'], self.all_sprites)
+                if 'coin' in self.audio_files:
+                    self.audio_files['coin'].play()
 
     def item_collision(self):
         for player in self.players:
@@ -350,13 +364,18 @@ class Level:
                                 attacker.bullets.remove(bullet)
 
     def check_constraint(self):
+       
         alive = [p for p in self.players if p.data.health > 0 and p.hitbox_rect.bottom < self.level_bottom + 300]
         if len(alive) == 0:
             return "gameover"
         if len(alive) == 1 and self.multiplayer:
             return f"{alive[0].data.name} won"
-        if len(self.item_sprites) == 0 and self.initial_item_count > 0 and not self.multiplayer:
-            return "win"
+   
+        if self.is_boss_level:
+            if len(self.tooth_sprites) == 0 and len(self.boss_sprites) == 0:
+                return "win" 
+        
+        return None
         
     def spawn_powerups(self):
         map_name = os.path.basename(self.tmx_map.filename)
@@ -384,21 +403,21 @@ class Level:
             # Check if player is close enough to interact
             self.near_flag = flag.can_interact(player.hitbox_rect)
 
-            
+        
     def start_boss_fight(self):
         if not self.boss_fight_started and self.game:
             self.boss_fight_started = True
-            print("Switching to boss level...")
-            self.game.switch_to_boss_level()
+            print("Signal to start boss sequence sent...")
+           
+            self.game.request_boss_sequence() 
             return True
         return False
 
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:  # Left mouse button
+                if event.button == 1:
                     if self.near_flag and not self.boss_fight_started:
-                        # Player clicked while near flag
                         if self.flag_sprites:
                             flag = self.flag_sprites.sprites()[0]
                             if flag.interact():
@@ -472,8 +491,6 @@ class Level:
             self.display.blit(fog_surface, (0, 0))
 
 
-
-
     def update(self, dt):
         self.all_sprites.update(dt)
         self.powerup_sprites.update(dt)
@@ -484,12 +501,8 @@ class Level:
         self.powerup_collision()
         self.check_constraint()
         self.flag_interaction()
-
-        if self.is_boss_level:
-            if len(self.tooth_sprites) == 0 :
-                if self.game:
-                    self.game.switch_to_boss_level(next_boss=True)
-                return  
+        if self.multiplayer:
+            self.powerup_collision()
 
         self.all_sprites.draw(self.players[0].hitbox_rect.center, dt)
 

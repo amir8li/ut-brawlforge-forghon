@@ -7,29 +7,44 @@ from src.level import Level
 from src.utils import *
 
 class Game:
-    def __init__(self, mode=None, selected_map=None, selected_hero=None, player_names=None, screen=None, audio_files=None, settings=None):
+    def __init__(self, mode=None, selected_map=None, selected_hero=None, player_names=None, screen=None, audio_files=None, settings=None, current_level=1):
         pygame.init()
-        self.screen = screen 
-        self.audio_files = audio_files  
-        self.settings = settings 
+        self.screen = screen
+        self.audio_files = audio_files
+        self.settings = settings
         self.mode = mode
         self.selected_map = selected_map
         self.selected_hero = selected_hero
         self.player_names = player_names
         self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode(SCREEN_SIZE)
-        pygame.display.set_caption(CAPTION)
-        self.settings = self.load_settings()
+        
+        if self.screen is None:
+            self.screen = pygame.display.set_mode(SCREEN_SIZE)
+            pygame.display.set_caption(CAPTION)
+        
+        if self.settings is None:
+            self.settings = self.load_settings()
+        
         self.music_volume = self.settings.get("music_volume", 0.5)
-        self.audio_files, _ = self.load_audio_files(self.settings)
+        
+        if self.audio_files is None:
+            self.audio_files, _ = self.load_audio_files(self.settings)
+
+        self.boss_sequence_requested = False
+        self.current_level_num = current_level
+
+      
         if self.mode and self.selected_map and self.selected_hero:
             self.import_assets()
+            
             if self.mode == "multi" and self.player_names and len(self.player_names) >= 2:
                 names = {i: name for i, name in enumerate(self.player_names)}
             else:
                 names = {0: self.player_names[0]} if self.player_names else None
+            
             self.ui = UI(self.font, self.ui_frames, self.mode, player_names=names, audio_files=self.audio_files)
             self.data = [Data(self.ui, i) for i in range(2 if self.mode == "multi" else 1)]
+            
             if self.mode == "multi":
                 for i, data in enumerate(self.data):
                     data.name = self.player_names[i]
@@ -37,19 +52,24 @@ class Game:
             else:
                 self.data[0].name = self.player_names[0]
                 self.data[0].character = self.selected_hero
-            self.tmx_maps = {0: load_pygame(join("data", "levels", self.selected_map))}
+
+            tmx_map = load_pygame(self.selected_map)
+            
             self.current_stage = Level(
-                self.tmx_maps[0],
+                tmx_map,
                 self.level_frames,
                 self.audio_files,
                 self.data,
-                self.powerup_locations
+                self.font,
+                game=self,
+                powerup_locations=self.powerup_locations,
+                current_level=self.current_level_num
             )
-
-        self.current_stage = Level(self.tmx_maps[0], self.level_frames, self.audio_files, self.data, self.font, self)
-        self.bg_sound = self.audio_files['bg']
-        self.bg_sound.set_volume(self.music_volume)
-        self.bg_sound.play(-1)
+            
+            self.bg_sound = self.audio_files.get('bg')
+            if self.bg_sound:
+                self.bg_sound.set_volume(self.music_volume)
+                self.bg_sound.play(-1)
 
         # # Always pass player_names as a dict to UI
         # # (Removed duplicate UI creation to fix heart display)
@@ -67,6 +87,10 @@ class Game:
         self.tmx_maps = {
             name: load_pygame(f"./data/levels/{name}") for name in self.boss_maps
         }
+
+    def request_boss_sequence(self):
+            """این متد توسط Level.start_boss_fight فراخوانی می‌شود"""
+            self.boss_sequence_requested = True
 
     @staticmethod
     def load_settings():
@@ -193,40 +217,24 @@ class Game:
             for event in events:
                 if event.type == pygame.QUIT:
                     self.bg_sound.stop()
-                    running = False
                     pygame.quit()
                     sys.exit()
 
+            if self.boss_sequence_requested:
+                self.bg_sound.stop()
+                return "start_boss_sequence"
 
+            self.current_stage.handle_events(events)
             self.current_stage.update(dt)
+            
             self.screen.fill("#91a7d0")
             self.current_stage.draw(self.screen)
-            
-            self.current_stage.handle_events(events)
-            # self.current_stage.run(dt)
             self.ui.update(dt)
             pygame.display.flip()
 
             result = self.current_stage.check_constraint()
-            if result in ["win", "gameover"] or (result is not None and result.endswith("won")):
+            if result: 
                 self.bg_sound.stop()
                 return result
 
-    def switch_to_boss_level(self, next_boss=False):
-        if next_boss:
-            self.current_boss_index += 1
-        boss_map_name = self.boss_maps[self.current_boss_index]
-        data = self.data if isinstance(self.data, list) else [self.data]
-        # Ensure each Data object has a name attribute
-        if hasattr(self, 'player_names') and self.player_names:
-            for i, d in enumerate(data):
-                if not hasattr(d, 'name') or d.name is None:
-                    d.name = self.player_names[i] if i < len(self.player_names) else f"player{i+1}"
-        self.current_stage = Level(
-            self.tmx_maps[boss_map_name],
-            self.level_frames,
-            self.audio_files,
-            data,
-            self.font,
-            self
-        )
+    

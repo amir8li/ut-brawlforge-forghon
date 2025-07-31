@@ -1,6 +1,6 @@
 import pygame
 import sys
-
+from os.path import join
 from config import SCREEN_SIZE
 from src.engine.game import Game
 from src.menu.loading_screen import LoadingScreen
@@ -12,29 +12,76 @@ from src.menu.end_screen import EndScreen
 from src.menu.option_screen import OptionsScreen
 
 def run_game(mode, selected_map, selected_hero, player_names, screen, audio_files, settings):
-    while True:
-        game = Game(
-            mode=mode,
-            selected_map=selected_map,
-            selected_hero=selected_hero,
-            player_names=player_names,
-            audio_files=audio_files,
-            settings=settings
-        )
+ 
+    initial_game = Game(
+        mode=mode, selected_map=selected_map, selected_hero=selected_hero,
+        player_names=player_names, screen=screen, audio_files=audio_files, settings=settings
+    )
+    initial_result = initial_game.run()
 
-        result = game.run()
-        if result in ["win", "gameover"] or result.endswith("won"):
+    if initial_result == "start_boss_sequence":
+        current_boss_level = 1
+        max_boss_levels = 5
+
+        while current_boss_level <= max_boss_levels:
+            
+            boss_map_path = join("data", "levels", f"boss {current_boss_level}.tmx")
+            print(f"--- Starting Boss Level {current_boss_level} ---")
+
+         
+            boss_game = Game(
+                mode=mode, selected_map=boss_map_path, selected_hero=selected_hero,
+                player_names=player_names, screen=screen, audio_files=audio_files, settings=settings,
+                current_level=current_boss_level 
+            )
+            boss_result = boss_game.run()
             snapshot = pygame.display.get_surface().copy()
-            end_screen = EndScreen(screen, result, snapshot, audio_files, settings)
-            choice = end_screen.run()
-            if choice in ["restart", "next"]:
-                continue
-            elif choice == "menu":
-                return "menu"
-            else:
-                break
-        else:
-            break
+
+            if boss_result == "gameover":
+                end_screen = EndScreen(screen, "gameover", snapshot, audio_files, settings)
+                choice = end_screen.run()
+                if choice == "restart":
+                    current_boss_level = 1 
+                    continue
+                return "menu" 
+
+          
+            elif boss_result == "win":
+         
+                if current_boss_level == max_boss_levels:
+                    end_screen = EndScreen(screen, "final_victory", snapshot, audio_files, settings)
+                    choice = end_screen.run() 
+                    if choice == "restart":
+                        current_boss_level = 1
+                        continue
+                    return "menu"
+
+                else:
+                    end_screen = EndScreen(screen, "win", snapshot, audio_files, settings)
+                    choice = end_screen.run() 
+                    if choice == "next":
+                        current_boss_level += 1
+                        continue
+                    elif choice == "restart":
+                        current_boss_level = 1
+                        continue
+                    return "menu"
+        return "menu" 
+
+   
+    elif initial_result in ["win", "gameover"] or (isinstance(initial_result, str) and initial_result.endswith("won")):
+        snapshot = pygame.display.get_surface().copy()
+        end_screen = EndScreen(screen, initial_result, snapshot, audio_files, settings)
+        choice = end_screen.run()
+        if choice in ["restart", "next"]:
+            return run_game(mode, selected_map, selected_hero, player_names, screen, audio_files, settings)
+        elif choice == "menu":
+            return "menu"
+        else: 
+            pygame.quit()
+            sys.exit()
+
+    return "menu" 
 
 def main():
     pygame.init()
@@ -65,20 +112,22 @@ def main():
                 player_names = ["Player"]
 
             map_char_select = MapCharacterSelect(
-                screen, selected_mode, player_names, audio_files, settings
-            )
-            selected_map, selected_characters = map_char_select.run()
-
-            result = run_game(
-                mode=selected_mode,
-                selected_map=selected_map,
-                selected_hero=selected_characters,
-                player_names=player_names,
-                screen=screen,
-                audio_files=audio_files,
-                settings=settings
-            )
-            if result == "menu":
+            screen, selected_mode, player_names, audio_files, settings
+        )
+        selected_map_filename, selected_characters = map_char_select.run()
+       
+        full_map_path = join("data", "levels", selected_map_filename)
+        
+        result = run_game(
+            mode=selected_mode,
+            selected_map=full_map_path, 
+            selected_hero=selected_characters,
+            player_names=player_names,
+            screen=screen,
+            audio_files=audio_files,
+            settings=settings
+        )
+        if result == "menu":
                 continue
 
         elif menu_choice == "options":

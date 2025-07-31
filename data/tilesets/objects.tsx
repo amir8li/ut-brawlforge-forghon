@@ -94,4 +94,13 @@
  <tile id="37">
   <image source="../../src/assets/images/enemies/ice wizard/Idle/0.png" width="90" height="75"/>
  </tile>
-</tileset>
+ <tile id="38">
+  <image source="../../src/assets/images/powerup/shield.png" width="90" height="75"/>
+ </tile>
+  <tile id="39">
+  <image source="../../src/assets/images/powerup/magic.png" width="90" height="75"/>
+ </tile>
+  <tile id="40">
+  <image source="../../src/assets/images/powerup/double_jump.png" width="90" height="75"/>
+ </tile>
+ </tileset>

@@ -83,6 +83,7 @@ def run_game(mode, selected_map, selected_hero, player_names, screen, audio_file
 
     return "menu" 
 
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode(SCREEN_SIZE)
@@ -90,18 +91,19 @@ def main():
     settings = Game.load_settings()
     audio_files, settings = Game.load_audio_files(settings)
 
-    skip_loading = False  
+    skip_loading = False 
 
     while True:
         if not skip_loading:
             LoadingScreen(screen, audio_files).run()
         else:
-            skip_loading = False  
+            skip_loading = False
 
         main_menu = MainMenu(screen, audio_files, settings)
         menu_choice = main_menu.run()
 
         if menu_choice == "start":
+          
             mode_screen = ModeSelectScreen(screen, audio_files, settings)
             selected_mode = mode_screen.run()
 
@@ -112,38 +114,39 @@ def main():
                 player_names = ["Player"]
 
             map_char_select = MapCharacterSelect(
-            screen, selected_mode, player_names, audio_files, settings
-        )
-        selected_map_filename, selected_characters = map_char_select.run()
-       
-        full_map_path = join("data", "levels", selected_map_filename)
-        
-        result = run_game(
-            mode=selected_mode,
-            selected_map=full_map_path, 
-            selected_hero=selected_characters,
-            player_names=player_names,
-            screen=screen,
-            audio_files=audio_files,
-            settings=settings
-        )
-        if result == "menu":
-                continue
+                screen, selected_mode, player_names, audio_files, settings
+            )
+            selected_map_filename, selected_characters = map_char_select.run()
+            
+            full_map_path = join("data", "levels", selected_map_filename)
+            
+            result = run_game(
+                mode=selected_mode,
+                selected_map=full_map_path, 
+                selected_hero=selected_characters,
+                player_names=player_names,
+                screen=screen,
+                audio_files=audio_files,
+                settings=settings
+            )
+            
+            if result == "menu":
+                continue 
 
         elif menu_choice == "options":
+            
             options_screen = OptionsScreen(screen, audio_files, settings)
             options_screen.run()
+            
+            if "menu_bg" in audio_files:
+                audio_files["menu_bg"].set_volume(settings.get("music_volume", 0.5))
 
-            audio_files["menu_bg"].set_volume(settings.get("music_volume", 0.5))
-
-            skip_loading = True  
-            continue
-
+            skip_loading = True
+            continue 
         elif menu_choice == "quit":
             if "menu_bg" in audio_files:
                 audio_files["menu_bg"].stop()
             pygame.quit()
             sys.exit()
-
 if __name__ == "__main__":
     main()

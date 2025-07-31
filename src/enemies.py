@@ -4,6 +4,7 @@ from src.sprites import Bullet
 from config import *
 from src.timer import Timer
 
+import openai
 
 def is_line_blocked(start, end, rects):
     for rect in rects:
@@ -503,10 +504,51 @@ class Boss(pygame.sprite.Sprite):
         
         # Visual feedback
         self.hit_timer = Timer(200)
-        
+
+
+        # OpenAI client for boss dialog
+        self.client = openai.OpenAI(api_key="tpsg-RUANDCn04b8K0A7qY78jOTiPps6ldJO", base_url="https://api.metisai.ir/openai/v1")
+        self.talk_message = None
+        self.talk_thread = None
+        self.talk_result_queue = None
+        self.talk_display_timer = Timer(6000)
+
+    def say(self, prompt):
+        import threading, queue
+        if self.talk_thread and self.talk_thread.is_alive():
+            return  # Already talking
+        self.talk_result_queue = queue.Queue()
+        def fetch():
+            import traceback
+            try:
+                model = "gpt-4o-mini"
+                messages = [
+                    {"role": "system", "content": "You are a video game boss. Be dramatic and taunt the player."},
+                    {"role": "user", "content": prompt}
+                ]
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=50,
+                    timeout=10
+                )
+                reply = response.choices[0].message.content
+                print(f"Boss says: {reply}")
+            except Exception as e:
+                traceback.print_exc()
+                reply = f"Error: {e}"
+            self.talk_result_queue.put(reply)
+        self.talk_thread = threading.Thread(target=fetch)
+        self.talk_thread.start()
+
     def update(self, dt):
         self.hit_timer.update()
         self.attack_timer.update()
+
+        # Check for new OpenAI message
+        if self.talk_result_queue and not self.talk_result_queue.empty():
+            self.talk_message = self.talk_result_queue.get()
+            self.talk_display_timer.activate()
 
         self.move_timer += dt
         if self.move_timer > 2.0:
@@ -514,7 +556,7 @@ class Boss(pygame.sprite.Sprite):
             self.move_timer = 0
 
         self.rect.x += self.direction.x * self.speed * dt
-        
+
         # Keep boss within bounds
         if self.rect.left < 100:
             self.rect.left = 100
@@ -522,19 +564,61 @@ class Boss(pygame.sprite.Sprite):
         elif self.rect.right > 2400:
             self.rect.right = 2400
             self.direction.x = -1
-            
+
         self.hitbox_rect.center = self.rect.center
-        
+
         # Simple attack pattern
         if not self.attack_timer.active:
             self.attack()
             self.attack_timer.activate()
-            
+
         # Visual feedback when hit
         if self.hit_timer.active:
             self.image.fill((255, 100, 100))  # Light red when hit
         else:
             self.image.fill((150, 0, 0))  # Normal dark red
+
+    def draw_talk(self, surface, font):
+        if self.talk_message and self.talk_display_timer.active:
+            # Smaller font for dialog
+            small_font = pygame.font.Font(font.get_name(), 24) if hasattr(font, 'get_name') else pygame.font.SysFont(None, 24)
+            rect_width = 340
+            rect_height = 70
+            rect_x = 20
+            rect_y = 20
+            # Brighter yellow for text
+            bright_yellow = (255, 255, 120)
+            shadow_color = (180, 180, 60)
+
+            # Word wrap the message
+            def wrap_text(text, font, max_width):
+                words = text.split(' ')
+                lines = []
+                current = ''
+                for word in words:
+                    test = current + (' ' if current else '') + word
+                    if font.size(test)[0] <= max_width:
+                        current = test
+                    else:
+                        if current:
+                            lines.append(current)
+                        current = word
+                if current:
+                    lines.append(current)
+                return lines
+
+            lines = wrap_text(self.talk_message, small_font, rect_width - 20)
+
+            # Draw each line with shadow and bright text, no border or background
+            y = rect_y + 10
+            for line in lines:
+                shadow = small_font.render(line, True, shadow_color)
+                text = small_font.render(line, True, bright_yellow)
+                shadow_rect = shadow.get_rect(topleft=(rect_x + 12, y + 2))
+                text_rect = text.get_rect(topleft=(rect_x + 10, y))
+                surface.blit(shadow, shadow_rect)
+                surface.blit(text, text_rect)
+                y += small_font.get_height() + 2
             
     def attack(self):
         distance = vector(self.rect.center) - vector(self.player.rect.center)
@@ -547,7 +631,8 @@ class Boss(pygame.sprite.Sprite):
             self.health -= damage
             self.hit_timer.activate()
             print(f"Boss health: {self.health}/{self.max_health}")
-            
+
+            self.say("You hit the boss! Respond as a taunting boss.")
             if self.health <= 0:
                 self.kill()
                 print("Boss defeated!")

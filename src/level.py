@@ -469,23 +469,24 @@ class Level:
         if self.is_boss_level:
             # Create a surface for the fog effect
             fog_surface = pygame.Surface((self.display.get_width(), self.display.get_height()), pygame.SRCALPHA)
-            
+
             # Get player's screen position
             camera_offset = self.all_sprites.offset
             player_screen_pos = (
                 int(self.players[0].hitbox_rect.centerx + camera_offset.x),
                 int(self.players[0].hitbox_rect.centery + camera_offset.y)
             )
-            
-            # Fill the entire screen with a dark color
-            fog_surface.fill((0, 0, 0, 220))
 
-            # Create a gradient effect for a soft edge
+            # Make the fog less opaque for better readability
+            base_alpha = 120  # was 220
+            fog_surface.fill((0, 0, 0, base_alpha))
+
+            # Create a gradient effect for a soft edge, also less opaque
             for i in range(60):
                 radius = self.fog_radius - i * 3
-                alpha = 220 - i * 3.5
+                alpha = base_alpha - i * 2  # softer gradient
                 if radius > 0 and alpha > 0:
-                    pygame.draw.circle(fog_surface, (0,0,0,alpha), player_screen_pos, radius)
+                    pygame.draw.circle(fog_surface, (0, 0, 0, alpha), player_screen_pos, radius)
 
             # Blit the fog surface onto the display
             self.display.blit(fog_surface, (0, 0))
@@ -508,6 +509,10 @@ class Level:
 
     def draw(self, surface):
         self.all_sprites.custom_draw(self.players[0] if len(self.players) == 1 else self.players)
+
+        for boss in self.boss_sprites:
+            if hasattr(boss, 'draw_talk'):
+                boss.draw_talk(surface, self.font)
         self.draw_ui_elements()
         self.draw_boss_health()
         self.draw_fog_of_war()

@@ -372,7 +372,7 @@ class Level:
             return f"{alive[0].data.name} won"
    
         if self.is_boss_level:
-            if len(self.tooth_sprites) == 0 and len(self.boss_sprites) == 0:
+            if len(self.enemy_sprites) == 0 and len(self.boss_sprites) == 0:
                 return "win" 
         
         return None

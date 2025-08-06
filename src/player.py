@@ -6,9 +6,13 @@ from src.timer import Timer
 from src.sprites import Bullet
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames,
-                 sounds, data, player_id=0):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, sounds, data, player_id=0, game=None):
         super().__init__(groups)
+        self.game = game
+        self.is_local = False 
+        self.username = "Player"
+        self.network_pos = vector(pos)
+
         self.is_player = True
         self.shield_active = False
         self.buff_damage_enabled = False
@@ -22,26 +26,22 @@ class Player(pygame.sprite.Sprite):
         self.data = data
         self.sounds = sounds
         self.player_id = player_id
-
         self.bullets = []
 
         if self.data.name == "player2":
             for key in self.frames:
-                self.frames[key] = [
-                    pygame.transform.smoothscale(img, (img.get_width()*2, img.get_height()*2))
-                    for img in self.frames[key]
-                ]
+                self.frames[key] = [pygame.transform.smoothscale(img, (img.get_width()*2, img.get_height()*2)) for img in self.frames[key]]
+        
         self.image = self.frames[self.state][self.frame_index]
         self.z = ZLAYERS["main"]
-
         adjusted_pos = list(pos)
+
         if self.data.name == "player3":
             adjusted_pos[1] += 30
-
+            
         self.rect = self.image.get_rect(topleft=adjusted_pos)
         self.hitbox_rect = self.rect.inflate(-76, -36)
         self.old_rect = self.hitbox_rect.copy()
-
         self.direction = vector(0, 0)
         self.speed = PLAYER_SPEED
         self.gravity = GRAVITY
@@ -49,27 +49,11 @@ class Player(pygame.sprite.Sprite):
         self.can_jump = True
         self.jump_height = JUMP_HEIGHT
         self.attacking = False
-        self.bullet_direction = vector()
-        self.attacked_enemies = []
-
-        self.cayote_time = 0.1
-        self.cayote_timer = 0
-
         self.collision_sprites = collision_sprites
         self.semi_collision_sprites = semi_collision_sprites
         self.on_surface = {'left': False, 'right': False, 'top': False, 'floor': False}
         self.platform = None
-
-        self.timers = {
-            "wall_jump": Timer(500),
-            "wall_slide": Timer(250),
-            "platform_skip": Timer(100),
-            "attack_cooldown": Timer(500),
-            "hit": Timer(800),
-            "shoot_cooldown": Timer(BULLET_COOLDOWN * 1000),
-        }
-
-        # audio
+        self.timers = { "wall_jump": Timer(500), "wall_slide": Timer(250), "platform_skip": Timer(100), "attack_cooldown": Timer(500), "hit": Timer(800), "shoot_cooldown": Timer(BULLET_COOLDOWN * 1000),}
         self.attack_sound = sounds['attack']
         self.attack_sound.set_volume(0.3)
         self.jump_sound = sounds['jump']
@@ -78,21 +62,30 @@ class Player(pygame.sprite.Sprite):
         self.bullet_sound.set_volume(0.3)
         self.damaged_sound = sounds['damage']
         self.damaged_sound.set_volume(0.6)
-
         self.frozen = False
         self.frozen_timer = Timer(0)
-
 
     def freeze(self, duration):
         self.frozen = True
         self.frozen_timer = Timer(duration)
         self.frozen_timer.activate()
 
+    def update_from_network(self, data):
+        if not self.is_local:
+            self.network_pos.x, self.network_pos.y = data['pos']
+            self.state = data['state']
+            self.face_right = data['face_right']
+            self.data.health = data['health']
+
     def input(self):
+        if not self.is_local:
+            return
+
         if self.frozen:
             self.direction.x = 0
             self.jump = False
             return
+        
         keys = pygame.key.get_pressed()
         input_vector = vector(0, 0)
 
@@ -115,6 +108,7 @@ class Player(pygame.sprite.Sprite):
                     self.can_jump = False
                 elif not (keys[pygame.K_SPACE] or keys[pygame.K_w]):
                     self.can_jump = True
+
             else:
                 if keys[pygame.K_RIGHT]:
                     input_vector.x += 1
@@ -135,7 +129,10 @@ class Player(pygame.sprite.Sprite):
                     self.can_jump = True
 
             if not self.timers["hit"].active:
-                self.direction.x = input_vector.normalize().x if input_vector else input_vector.x
+                if input_vector:
+                    self.direction.x = input_vector.normalize().x
+                else:
+                    self.direction.x = 0
 
     def attack(self):
         if not self.timers["attack_cooldown"].active:
@@ -288,6 +285,9 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = self.hitbox_rect.center
 
     def damage(self, knockback=True):
+        if not self.is_local:
+            return
+
         if self.shield_active:
             return
         if not self.timers["hit"].active:
@@ -298,7 +298,8 @@ class Player(pygame.sprite.Sprite):
             self.timers["hit"].activate()
             if not knockback:
                 return
-
+                
+            
     def flicker(self):
         if self.timers["hit"].active and sin(pygame.time.get_ticks()*100) >= 0:
             white_mask = pygame.mask.from_surface(self.image)
@@ -332,16 +333,25 @@ class Player(pygame.sprite.Sprite):
             surface.blit(shield_surface, shield_rect)
 
     def update(self, dt):
-        self.old_rect = self.hitbox_rect.copy()
-        self.update_timers()
         if self.frozen:
             self.frozen_timer.update()
-            if not self.frozen_timer.active and self.frozen:
+            if not self.frozen_timer.active:
                 self.frozen = False
-        self.input()
-        self.platform_move(dt)
-        self.move(dt)
-        self.check_contact()
+
+        if self.is_local:
+            self.old_rect = self.hitbox_rect.copy()
+            self.update_timers()
+            self.input()
+            self.platform_move(dt)
+            self.move(dt)
+            self.check_contact()
+
+        else:
+            interpolation_factor = 0.2 
+            current_pos = vector(self.hitbox_rect.topleft)
+            self.hitbox_rect.topleft = current_pos.lerp(self.network_pos, interpolation_factor)
+            self.rect.center = self.hitbox_rect.center
+
         self.get_state()
         self.animate(dt)
         self.flicker()
@@ -349,10 +359,10 @@ class Player(pygame.sprite.Sprite):
             self.state = "idle"
 
         current_time = pygame.time.get_ticks()
-        if self.double_jump_enabled and current_time - self.double_jump_timer > self.double_jump_duration:
+        if self.double_jump_enabled and hasattr(self, 'double_jump_timer') and current_time - self.double_jump_timer > self.double_jump_duration:
             self.double_jump_enabled = False
             self.has_double_jumped = False
-        if self.buff_damage_enabled and current_time - self.buff_timer > self.buff_duration:
+        if self.buff_damage_enabled and hasattr(self, 'buff_timer') and current_time - self.buff_timer > self.buff_duration:
             self.buff_damage_enabled = False
-        if self.shield_active and current_time - self.shield_timer > self.shield_duration:
+        if self.shield_active and hasattr(self, 'shield_timer') and current_time - self.shield_timer > self.shield_duration:
             self.shield_active = False

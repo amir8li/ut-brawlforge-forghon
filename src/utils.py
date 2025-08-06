@@ -40,79 +40,99 @@ class UI:
         self.display = pygame.display.get_surface()
         self.mode = mode
         self.audio_files = audio_files
-        self.heart_sprites = {0: pygame.sprite.Group(), 1: pygame.sprite.Group()}
         self.font = font
         self.name_font = pygame.font.Font(
             os.path.join("src", "assets", "images", "menu", "fonts", "runescape_uf.ttf"), 14
         )
-        self.player_names = player_names if player_names else {0: "PLAYER 1", 1: "PLAYER 2"}
+        self.player_names = player_names if player_names else {}
         self.heart_frames = frames["heart"]
         self.heart_width = self.heart_frames[0].get_width()
         self.heart_padding = 6
-        self.coin_amount = {0: 0, 1: 0}
-        self.coin_timer = Timer(1000)
         self.coin_frame = frames["coin"]
+        self.coin_timer = Timer(1000)
+        self.heart_sprites = {}
+        self.coin_amount = {}
+
+        for player_id in self.player_names.keys():
+            self.heart_sprites[player_id] = pygame.sprite.Group()
+            self.coin_amount[player_id] = 0
 
     def create_hearts(self, amount, player_id):
+        if player_id not in self.heart_sprites: return
+
         for sprite in self.heart_sprites[player_id]:
             sprite.kill()
+       
+        y_pos = 10 
+        if player_id >= 2:
+            y_pos = SCREEN_SIZE[1] - 10 - self.heart_frames[0].get_height()
+
         for heart in range(amount):
-            if player_id == 0:
+            if player_id == 0 or player_id == 2:
                 x = 10 + heart * (self.heart_width + self.heart_padding)
-                y = 10
             else:
                 x = SCREEN_SIZE[0] - 10 - self.heart_width - (heart * (self.heart_width + self.heart_padding))
-                y = 10
-            Heart((x, y), self.heart_frames, self.heart_sprites[player_id])
-        if self.audio_files and 'type' in self.audio_files:
-            self.audio_files['type'].set_volume(0.5)
-            self.audio_files['type'].play()
+            
+            Heart((x, y_pos), self.heart_frames, self.heart_sprites[player_id])
 
     def display_text(self, player_id):
-        if self.coin_timer.active:
+        if self.mode == 'online':
+            return
+
+        if self.coin_timer.active and player_id in self.coin_amount:
+            text_surf = self.font.render(f'{self.coin_amount[player_id]}', False, "#33323d")
+            
             if player_id == 0:
                 coin_rect = self.coin_frame.get_rect(topleft=(10, 34))
-                self.display.blit(self.coin_frame, coin_rect)
-                text_surf = self.font.render(f'{self.coin_amount[player_id]}', False, "#33323d")
                 text_rect = text_surf.get_rect(midleft=(coin_rect.right + 5, coin_rect.centery))
-                self.display.blit(text_surf, text_rect)
-            elif self.mode == "multi":
+            elif player_id == 1:
                 coin_rect = self.coin_frame.get_rect(topright=(SCREEN_SIZE[0] - 10, 34))
-                self.display.blit(self.coin_frame, coin_rect)
-                text_surf = self.font.render(f'{self.coin_amount[player_id]}', False, "#33323d")
                 text_rect = text_surf.get_rect(midright=(coin_rect.left - 5, coin_rect.centery))
-                self.display.blit(text_surf, text_rect)
+            else:
+                return 
+            self.display.blit(self.coin_frame, coin_rect)
+            self.display.blit(text_surf, text_rect)
 
     def show_player_name(self, player_id):
         name = self.player_names.get(player_id, f"PLAYER {player_id + 1}")
-        shadow_color = (0, 0, 0)
-        text_color = (255, 255, 255)
-        name_surf = self.name_font.render(name, True, text_color)
-        shadow_surf = self.name_font.render(name, True, shadow_color)
-        if player_id == 0:
+        name_surf = self.name_font.render(name, True, (255, 255, 255))
+        shadow_surf = self.name_font.render(name, True, (0, 0, 0))
+
+        y_offset = self.heart_frames[0].get_height() + 4
+
+        if player_id == 0 or player_id == 1:
+            y = 10 + y_offset
+        else:
+            y = SCREEN_SIZE[1] - 10 - y_offset
+        
+        if player_id == 0 or player_id == 2:
             x = 10
         else:
             x = SCREEN_SIZE[0] - 10 - name_surf.get_width()
-        y = 10 + self.heart_frames[0].get_height() + 4
-        self.display.blit(shadow_surf, (x + 2, y + 2))
-        self.display.blit(name_surf, (x, y))
+        
+        pos = (x, y)
+        self.display.blit(shadow_surf, (pos[0] + 1, pos[1] + 1))
+        self.display.blit(name_surf, pos)
 
     def show_coins(self, amount, player_id):
+        if self.mode == 'online':
+            return
+        
+        if player_id not in self.coin_amount: return
         self.coin_amount[player_id] = amount
         self.coin_timer.activate()
-        if self.audio_files and 'type' in self.audio_files:
-            self.audio_files['type'].set_volume(0.5)
-            self.audio_files['type'].play()
 
     def update(self, dt):
-        self.coin_timer.update()
-        player_ids = [0] if self.mode != "multi" else [0, 1]
-        for player_id in player_ids:
-            self.heart_sprites[player_id].update(dt)
-            self.heart_sprites[player_id].draw(self.display)
+        if self.mode != 'online':
+            self.coin_timer.update()
+
+        for player_id in self.player_names.keys():
+            if player_id in self.heart_sprites:
+                self.heart_sprites[player_id].update(dt)
+                self.heart_sprites[player_id].draw(self.display)
+            
             self.display_text(player_id)
-            if self.mode == "multi":
-                self.show_player_name(player_id)
+            self.show_player_name(player_id)
 
 class Heart(AnimatedSprite):
     def __init__(self, pos, frame, groups):

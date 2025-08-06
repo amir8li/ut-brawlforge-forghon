@@ -1,3 +1,4 @@
+# src/level.py (نسخه نهایی و کامل)
 import pygame
 import os
 from pygame import Vector2 as vector
@@ -21,24 +22,16 @@ class Level:
         self.is_boss_level = "boss" in str(tmx_map.filename).lower() if hasattr(tmx_map, 'filename') and tmx_map.filename else False
         self.level_width = tmx_map.width * 64
         self.level_bottom = tmx_map.height * 64
-        tmx_level_properties = tmx_map.get_layer_by_name("Data")[0].properties
-        if tmx_level_properties["bg"]:
-            bg_tile = level_frames["bg_tiles"][tmx_level_properties["bg"]]
-        else:
-            bg_tile=None
         self.display = pygame.display.get_surface()
         self.tmx_map = tmx_map
-        self.display = pygame.display.get_surface()
         self.level_width = tmx_map.width * TILE_SIZE
         self.level_bottom = tmx_map.height * TILE_SIZE
         self.multiplayer = len(data) > 1
         self.powerup_locations = powerup_locations or {}
         self.audio_files = audio_files
-
         tmx_level_properties = tmx_map.get_layer_by_name("Data")[0].properties
         bg_tile = level_frames["bg_tiles"][tmx_level_properties["bg"]] if tmx_level_properties["bg"] else None
         clouds_dict = {"large": level_frames["cloud_large"], "small": level_frames["cloud_small"]}
-
         self.all_sprites = AllSprites(
             tmx_map.width, tmx_map.height,
             clouds_dict, tmx_level_properties["horizon_line"], bg_tile
@@ -55,23 +48,18 @@ class Level:
         self.archer_sprites = pygame.sprite.Group()
         self.flag_sprites = pygame.sprite.Group()
         self.boss_sprites = pygame.sprite.Group()
-
         self.near_flag = False
         self.boss_fight_started = False
-        
         self.is_boss_level = "boss" in str(tmx_map)
-
-        # Fog of war for boss fight
-        self.fog_radius = 200  # Radius of visible area around player
-
+        self.fog_radius = 200
         self.initial_item_count = 0
         self.powerup_sprites = pygame.sprite.Group()
         self.level_frames = level_frames
         self.coin_sound = audio_files['coin']
         self.coin_sound.set_volume(0.3)
         self.players = []
-
         self.setup(tmx_map, level_frames, audio_files)
+
 
     def setup(self, tmx_map, level_frames, audio_files):
         for layer in ["BG", "Terrain", "FG", "Platforms"]:
@@ -113,8 +101,6 @@ class Level:
                 z = ZLAYERS["main"] if "bg" not in obj.name else ZLAYERS["bg details"]
                 anim_speed = ANIMATION_SPEED if "palm" not in obj.name else 6 + uniform(-1, 1)
                 AnimatedSprite((obj.x, obj.y), frames, groups, z, anim_speed)
-
-                                # Handle flag specially for boss fight interaction
             if obj.name == "flag":
                 flag_sprite = Flag(
                     pos=(obj.x + obj.width // 2, obj.y + obj.height // 2),
@@ -125,26 +111,40 @@ class Level:
                 self.boss_start_rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
 
         if not player_positions:
-            player_positions = [(100, 200), (300, 200)]
+            player_positions = [(100, 200), (300, 200), (400, 200), (500, 200)]
+
+        is_online_mode = self.game and self.game.mode == 'online'
+        my_player_id_from_server = self.game.network.player_id if is_online_mode else None
+        all_player_ids_from_server = self.game.online_game_data['players'] if is_online_mode else []
 
         for i, data in enumerate(self.data):
-            base_pos = player_positions[i % len(player_positions)]
-            spawn_offset = 100 * i
-            player_pos = (base_pos[0] + spawn_offset, base_pos[1])
+            player_pos = player_positions[i % len(player_positions)]
+            player_character_frames = self.level_frames["player"][i]
+
             player = Player(
                 pos=player_pos,
                 groups=self.all_sprites,
                 collision_sprites=self.collision_sprites,
                 semi_collision_sprites=self.semi_collision_sprites,
-                frames=level_frames["player"][i] if isinstance(level_frames["player"], list) else level_frames["player"],
+                frames=player_character_frames,
                 sounds=self.audio_files,
                 data=data,
-                player_id=i
+                player_id=i,
+                game=self.game
             )
+
+            player.username = data.name
+
+            if is_online_mode:
+                if all_player_ids_from_server[i] == my_player_id_from_server:
+                    player.is_local = True
+            elif self.game.mode == 'multi':
+                player.is_local = True 
+            elif i == 0:
+                player.is_local = True
+                
             self.players.append(player)
 
-
-        # enemies
         all_collision_sprites = pygame.sprite.Group(chain(self.collision_sprites.sprites(), self.platform_sprites_for_enemies.sprites()))
         for obj in tmx_map.get_layer_by_name("Enemies"):
             player_to_follow = self.players[0]
@@ -161,21 +161,66 @@ class Level:
                 boss_x = (tmx_map.width * TILE_SIZE) // 2
                 boss_y = (tmx_map.height * TILE_SIZE) // 2 - 100
                 Boss((boss_x, boss_y), (self.all_sprites, self.damage_sprites, self.boss_sprites), self.players[0])
-
         self.initial_enemy_count = len(self.enemy_sprites)
-
-        if self.multiplayer and tmx_map.get_layer_by_name("powerups"):
-            for obj in tmx_map.get_layer_by_name("powerups"):
-                power_type = obj.name
-                if power_type in level_frames["powerups"]:
-                    surf = level_frames["powerups"][power_type]
-                    PowerUp(
-                        pos=(obj.x + obj.width / 2, obj.y + obj.height / 2),
-                        power_type=power_type,
-                        surf=surf,
-                        groups=[self.all_sprites, self.powerup_sprites]
-                    )
-
+        if self.game and self.game.mode == 'multi':
+            try:
+                powerups_layer = tmx_map.get_layer_by_name("powerups")
+                for obj in powerups_layer:
+                    power_type = obj.name
+                    if power_type in level_frames["powerups"]:
+                        surf = level_frames["powerups"][power_type]
+                        PowerUp(pos=(obj.x + obj.width / 2, obj.y + obj.height / 2), power_type=power_type, surf=surf, groups=[self.all_sprites, self.powerup_sprites])
+            except ValueError:
+                print("Warning: 'powerups' layer not found in this local multiplayer map. Skipping.")
+        for obj in tmx_map.get_layer_by_name("Moving Objects"):
+            if obj.name == "spike":
+                surf = level_frames["spike"]
+                if isinstance(surf, list): surf = surf[0]
+                Spike(pos=(obj.x + obj.width / 2, obj.y + obj.height / 2), surf=surf, radius=obj.properties.get("radius", 100), speed=obj.properties.get("speed", 50), start_angle=obj.properties.get("start_angle", 0), end_angle=obj.properties.get("end_angle", -1), groups=(self.all_sprites, self.damage_sprites))
+                for i in range(0, obj.properties.get("radius", 100), 20):
+                    Spike(pos=(obj.x + obj.width / 2, obj.y + obj.height / 2), surf=level_frames["spike_chain"], radius=i, speed=obj.properties.get("speed", 50), start_angle=obj.properties.get("start_angle", 0), end_angle=obj.properties.get("end_angle", -1), groups=self.all_sprites, z=ZLAYERS["bg details"])
+            else:
+                frames = level_frames[obj.name]
+                if isinstance(frames, pygame.Surface): frames = [frames]
+                is_platform = obj.properties.get("platform", False)
+                is_harmful = obj.properties.get("harmful", False)
+                groups = [self.all_sprites]
+                if is_platform: groups.append(self.semi_collision_sprites)
+                elif is_harmful: groups.append(self.damage_sprites)
+                else: groups.append(self.collision_sprites)
+                if obj.width > obj.height:
+                    move_dir = 'x'
+                    start_pos = (obj.x, obj.y + obj.height // 2)
+                    end_pos = (obj.x + obj.width, obj.y + obj.height // 2)
+                else:
+                    move_dir = 'y'
+                    start_pos = (obj.x + obj.width // 2, obj.y)
+                    end_pos = (obj.x + obj.width // 2, obj.y + obj.height)
+                speed = obj.properties.get("speed", 1)
+                flip = obj.properties.get("flip", False)
+                MovingSprite(frames, tuple(groups), start_pos, end_pos, speed, move_dir, flip)
+                if obj.name == "saw":
+                    chain_surf = level_frames["saw_chain"]
+                    if move_dir == "x":
+                        y = start_pos[1] - chain_surf.get_height() // 2
+                        for x in range(int(start_pos[0]), int(end_pos[0]), 20): Sprite((x, y), chain_surf, self.all_sprites, ZLAYERS["bg details"])
+                    else:
+                        x = start_pos[0] - chain_surf.get_width() // 2
+                        for y in range(int(start_pos[1]), int(end_pos[1]), 20): Sprite((x, y), chain_surf, self.all_sprites, ZLAYERS["bg details"])
+        for obj in tmx_map.get_layer_by_name("Items"):
+            Item(obj.name, (obj.x + 32, obj.y + 32), level_frames["items"][obj.name], (self.all_sprites, self.item_sprites), self.data)
+        self.initial_item_count = len(self.item_sprites)
+        for obj in tmx_map.get_layer_by_name("Water"):
+            rows = int(obj.height / 64)
+            cols = int(obj.width / 64)
+            for row in range(rows):
+                for col in range(cols):
+                    x = obj.x + col * 64
+                    y = obj.y + row * 64
+                    if row == 0:
+                        AnimatedSprite((x, y), self.level_frames["water_top"], self.all_sprites, ZLAYERS["water"])
+                    else:
+                        Sprite((x, y), self.level_frames["water_body"], self.all_sprites, ZLAYERS["water"])      
         # moving objects
         for obj in tmx_map.get_layer_by_name("Moving Objects"):
             if obj.name == "spike":
@@ -299,69 +344,43 @@ class Level:
                         sprite.direction *= -1
                         sprite.facing_right = sprite.direction > 0
 
+
     def attack_collision(self):
         enemy_sprites = self.tooth_sprites.sprites() + self.bombastic_sprites.sprites() + self.archer_sprites.sprites() + self.ice_wizard_sprites.sprites()
-        
-        for target in enemy_sprites:
-            facing_target = (self.players[0].rect.centerx < target.rect.centerx and self.players[0].face_right) or \
-                            (self.players[0].rect.centerx > target.rect.centerx and not self.players[0].face_right)
-
-            if target.hitbox_rect.colliderect(self.players[0].rect) and self.players[0].attacking and facing_target:
-                if target not in self.players[0].attacked_enemies:
-                    target.take_damage()
-                    self.players[0].attacked_enemies.append(target)
-
-        # Boss attack collision
-        for target in self.boss_sprites.sprites():
-            facing_target = (self.players[0].rect.centerx < target.rect.centerx and self.players[0].face_right) or \
-                            (self.players[0].rect.centerx > target.rect.centerx and not self.players[0].face_right)
-
-            if target.hitbox_rect.colliderect(self.players[0].rect) and self.players[0].attacking and facing_target:
-                target.take_damage()
-    
         for player in self.players:
-            for sprite in self.damage_sprites:
-                offset = (sprite.rect.left - player.rect.left, sprite.rect.top - player.rect.top)
-                if pygame.sprite.collide_mask(player, sprite):
-                    player.damage(knockback=False)
+            if player.is_local and player.attacking:
+                for target in enemy_sprites:
+                    facing_target = (player.rect.centerx < target.rect.centerx and player.face_right) or \
+                                    (player.rect.centerx > target.rect.centerx and not player.face_right)
+                    if target.hitbox_rect.colliderect(player.rect) and facing_target:
+                        if target not in getattr(player, 'attacked_enemies', []):
+                            target.take_damage()
+                            getattr(player, 'attacked_enemies', []).append(target)
 
-        affected_targets = set()
-        for i, attacker in enumerate(self.players):
-            for j, target in enumerate(self.players):
-                if i == j or target in affected_targets:
-                    continue
-                if attacker.attacking:
-                    facing_target = (
-                        attacker.rect.centerx < target.rect.centerx and attacker.face_right
-                    ) or (
-                        attacker.rect.centerx > target.rect.centerx and not attacker.face_right
-                    )
-                    if target.rect.colliderect(attacker.rect) and facing_target:
-                        target.knockback_from(attacker)
-                        affected_targets.add(target)
-
-        if not self.multiplayer:
-            for player in self.players:
-                for target in self.tooth_sprites:
-                    facing_target = (
-                        player.rect.centerx < target.rect.centerx and player.face_right
-                    ) or (
-                        player.rect.centerx > target.rect.centerx and not player.face_right
-                    )
-                    if target.rect.colliderect(player.rect) and player.attacking and facing_target:
-                        if hasattr(target, 'reverse') and callable(getattr(target, 'reverse')):
-                            target.reverse()
+        if self.game and self.game.mode != 'online':
+            affected_targets = set()
+            for i, attacker in enumerate(self.players):
+                for j, target in enumerate(self.players):
+                    if i == j or target in affected_targets:
+                        continue
+                    if attacker.attacking:
+                        facing_target = (attacker.rect.centerx < target.rect.centerx and attacker.face_right) or \
+                                        (attacker.rect.centerx > target.rect.centerx and not attacker.face_right)
+                        if target.rect.colliderect(attacker.rect) and facing_target:
+                            target.knockback_from(attacker)
+                            affected_targets.add(target)
 
     def bullet_collision(self):
-        for i, attacker in enumerate(self.players):
-            for bullet in attacker.bullets:
-                for j, target in enumerate(self.players):
-                    if i != j and bullet.rect.colliderect(target.rect):
-                        if not target.timers["hit"].active:
-                            target.damage()
-                            bullet.kill()
-                            if bullet in attacker.bullets:
-                                attacker.bullets.remove(bullet)
+        if self.game and self.game.mode != 'online':
+            for i, attacker in enumerate(self.players):
+                for bullet in attacker.bullets:
+                    for j, target in enumerate(self.players):
+                        if i != j and bullet.rect.colliderect(target.rect):
+                            if not target.timers["hit"].active:
+                                target.damage()
+                                bullet.kill()
+                                if bullet in attacker.bullets:
+                                    attacker.bullets.remove(bullet)
 
     def check_constraint(self):
        
@@ -519,4 +538,8 @@ class Level:
         for player in self.players:
             player.draw_shield(surface)
 
-
+    def get_local_player(self):
+        for player in self.players:
+            if player.is_local:
+                return player
+        return None

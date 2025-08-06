@@ -7,7 +7,9 @@ class Protocols:
         SEARCH_PLAYER = "search_player"
         REQUEST_GAME = "request_game"
         PLAYER_ELIMINATED = "player_eliminated"
-    
+        INVITE_PLAYER = "invite_player"
+        INVITE_RESPONSE = "invite_response"
+
     class Response:
         WELCOME = "welcome"
         USERNAME_SET = "username_set"
@@ -23,3 +25,9 @@ class Protocols:
         GAME_ENDED = "game_ended"
         PLAYER_ELIMINATED = "player_eliminated"
         TEAM_ASSIGNED = "team_assigned"
+        INVITE_RECEIVED = "invite_received"
+        INVITE_FAILED = "invite_failed"
+        INVITE_ACCEPTED = "invite_accepted"
+        INVITE_DECLINED = "invite_declined"
+        PLAYER_TOOK_DAMAGE = "player_took_damage"
+        GAME_ENDED = "game_ended"

@@ -56,9 +56,11 @@ class MainMenu:
             self.audio_files['menu_bg'].play(-1)
 
     def create_buttons(self):
-        self.buttons.append(Button("START", (SCREEN_SIZE[0] // 2, 300), self.font, lambda: self.select("start")))
-        self.buttons.append(Button("OPTIONS", (SCREEN_SIZE[0] // 2, 400), self.font, lambda: self.select("options")))
-        self.buttons.append(Button("QUIT", (SCREEN_SIZE[0] // 2, 500), self.font, lambda: self.select("quit")))
+        self.buttons.append(Button("START", (SCREEN_SIZE[0] // 2, 280), self.font, lambda: self.select("start")))
+        self.buttons.append(Button("ONLINE GAME", (SCREEN_SIZE[0] // 2, 360), self.font, lambda: self.select("online")))
+        self.buttons.append(Button("OPTIONS", (SCREEN_SIZE[0] // 2, 440), self.font, lambda: self.select("options")))
+        self.buttons.append(Button("QUIT", (SCREEN_SIZE[0] // 2, 520), self.font, lambda: self.select("quit")))
+
 
     def select(self, choice):
         if 'click' in self.audio_files:

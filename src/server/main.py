@@ -48,21 +48,26 @@ class Server:
             self.disconnect(client)
 
     def handle_client(self, client, player_id):
+        buffer = ""
         while True:
             try:
-                data = client.recv(1024).decode("utf-8")
+                data = client.recv(2048).decode("utf-8")
                 if not data:
                     break
                 
-                message = json.loads(data)
-                self.handle_message(message, player_id)
-                
+                buffer += data
+                while '\n' in buffer:
+                    message_str, buffer = buffer.split('\n', 1)
+                    if message_str:
+                        message = json.loads(message_str)
+                        self.handle_message(message, player_id)
+
             except json.JSONDecodeError:
-                self.send(Protocols.Response.ERROR, "Invalid JSON format", client)
+                self.send(Protocols.Response.ERROR, f"Invalid JSON format: {message_str}", client)
             except Exception as e:
                 print(f"Error handling message from {player_id}: {e}")
                 break
-
+            
     def handle_message(self, message, player_id):
         msg_type = message.get("type")
         
@@ -80,6 +85,10 @@ class Server:
             self.handle_game_action(player_id, message)
         elif msg_type == Protocols.Request.PLAYER_ELIMINATED:
             self.handle_player_eliminated(player_id)
+        elif msg_type == Protocols.Request.INVITE_PLAYER:
+            self.handle_invite(player_id, message)
+        elif msg_type == Protocols.Request.INVITE_RESPONSE:
+            self.handle_invite_response(player_id, message)
         else:
             self.send(Protocols.Response.ERROR, f"Unknown message type: {msg_type}", 
                      self.player_sockets[player_id])
@@ -216,34 +225,23 @@ class Server:
     def create_room(self, players, game_mode="1v1"):
         room_id = self.room_manager.create_room(players, game_mode)
         room = self.room_manager.get_room(room_id)
-        
         for player_id in players:
             self.player_status[player_id] = "in_game"
             self.player_rooms[player_id] = room_id
         
         print(f"Created {game_mode} room {room_id} with players: {players}")
         
+        room_message = {
+            "room_id": room_id,
+            "players": players,
+            "game_mode": game_mode,
+            "team1": room.team1,
+            "team2": room.team2
+        }
+        
         for player_id in players:
-            team_number = self.room_manager.get_player_team(room_id, player_id)
-            team_players = self.room_manager.get_team_players(room_id, team_number)
-            
-            room_message = {
-                "room_id": room_id,
-                "players": players,
-                "game_mode": game_mode,
-                "team1": room.team1,
-                "team2": room.team2,
-                "your_team": team_number,
-                "your_teammates": team_players
-            }
-            
-            self.send(Protocols.Response.ROOM_CREATED, room_message, 
-                     self.player_sockets[player_id])
-            
-            self.send(Protocols.Response.TEAM_ASSIGNED, {
-                "team": team_number,
-                "teammates": team_players
-            }, self.player_sockets[player_id])
+            if player_id in self.player_sockets:
+                self.send(Protocols.Response.ROOM_CREATED, room_message, self.player_sockets[player_id])
         
         self.start_countdown(room_id)
 
@@ -268,31 +266,24 @@ class Server:
                      self.player_sockets[player_id])
         
         print(f"Game started in room {room_id}")
-
+            
     def handle_game_action(self, player_id, message):
-        room_id = self.player_rooms.get(player_id)
-        if not room_id:
-            self.send(Protocols.Response.ERROR, "Not in a game room", 
-                     self.player_sockets[player_id])
-            return
+            room_id = self.player_rooms.get(player_id)
+            if not room_id: return
+            room = self.room_manager.get_room(room_id)
+            if not room: return
+
+            action = message.get("action")
+            if action == "player_update":
+                message_to_forward = {
+                    "player_id": player_id,
+                    "action": action,
+                    "data": message.get("data", {})
+                }
+                for other_id in room.players:
+                    if other_id != player_id and other_id in self.player_sockets:
+                        self.send(Protocols.Response.GAME_ACTION, message_to_forward, self.player_sockets[other_id])
         
-        room = self.room_manager.get_room(room_id)
-        if not room or room.status != "playing":
-            self.send(Protocols.Response.ERROR, "Game not active", 
-                     self.player_sockets[player_id])
-            return
-        
-        action_data = {
-            "player_id": player_id,
-            "action": message.get("action"),
-            "data": message.get("data", {})
-        }
-        
-        for other_player_id in room.players:
-            if other_player_id != player_id:
-                self.send(Protocols.Response.GAME_ACTION, action_data, 
-                         self.player_sockets[other_player_id])
-    
     def handle_player_eliminated(self, player_id):
         room_id = self.player_rooms.get(player_id)
         if not room_id:
@@ -378,19 +369,19 @@ class Server:
         room = self.room_manager.get_room(room_id)
         if not room:
             return
-        
+
         for other_player_id in room.players:
-            if other_player_id != player_id:
+            if other_player_id != player_id and other_player_id in self.player_sockets:
                 self.send(Protocols.Response.PLAYER_LEFT, {"player_id": player_id}, 
-                         self.player_sockets[other_player_id])
-        
+                          self.player_sockets[other_player_id])
+  
         if len(room.players) <= 1:
             if room.status == "playing":
                 for other_player_id in room.players:
-                    if other_player_id != player_id:
+                    if other_player_id != player_id and other_player_id in self.player_sockets:
                         self.send(Protocols.Response.GAME_ENDED, 
-                                {"reason": "player_disconnected"}, 
-                                self.player_sockets[other_player_id])
+                                  {"reason": "player_disconnected"}, 
+                                  self.player_sockets[other_player_id])
             
             self.room_manager.remove_room(room_id)
             print(f"Removed room {room_id}")
@@ -398,7 +389,7 @@ class Server:
     def send(self, r_type, data, client):
         try:
             message = {"type": r_type, "data": data}
-            message_str = json.dumps(message)
+            message_str = json.dumps(message) + '\n'
             client.send(message_str.encode("utf-8"))
         except Exception as e:
             print(f"Error sending message: {e}")
@@ -415,6 +406,46 @@ class Server:
                 print(f"Error accepting connection: {e}")
                 break
 
+    def handle_invite(self, inviter_id, message):
+        target_id = message.get("target_id")
+        
+        if not target_id or target_id not in self.player_sockets:
+            self.send(Protocols.Response.INVITE_FAILED, {"reason": "Player not found."}, self.player_sockets[inviter_id])
+            return
+        
+        if self.player_status.get(target_id) != "connected":
+            self.send(Protocols.Response.INVITE_FAILED, {"reason": "Player is busy."}, self.player_sockets[inviter_id])
+            return
+        
+        if target_id == inviter_id:
+            self.send(Protocols.Response.INVITE_FAILED, {"reason": "You cannot invite yourself."}, self.player_sockets[inviter_id])
+            return
+
+        inviter_username = self.player_usernames.get(inviter_id, "Someone")
+        self.send(Protocols.Response.INVITE_RECEIVED, {
+            "inviter_id": inviter_id,
+            "inviter_username": inviter_username
+        }, self.player_sockets[target_id])
+        
+        print(f"Player {inviter_id} ({inviter_username}) invited Player {target_id}.")
+
+    def handle_invite_response(self, respondee_id, message):
+        inviter_id = message.get("inviter_id")
+        accepted = message.get("accepted", False)
+
+        if not inviter_id or inviter_id not in self.player_sockets:
+            return # Inviter has disconnected
+
+        if accepted:
+            print(f"Player {respondee_id} accepted invite from {inviter_id}.")
+            self.send(Protocols.Response.INVITE_ACCEPTED, {"respondee_id": respondee_id}, self.player_sockets[inviter_id])
+            time.sleep(0.1) # A small delay to ensure messages are processed
+            self.create_direct_game(inviter_id, respondee_id, "1v1")
+        else:
+            print(f"Player {respondee_id} declined invite from {inviter_id}.")
+            self.send(Protocols.Response.INVITE_DECLINED, {"respondee_id": respondee_id}, self.player_sockets[inviter_id])
+
+ 
 if __name__ == "__main__":
     server = Server()
     try:

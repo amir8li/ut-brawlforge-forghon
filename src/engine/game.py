@@ -243,6 +243,10 @@ class Game:
                         if attacker_player:
                             attacker_player.attacking = True
                             attacker_player.frame_index = 0
+
+                    elif msg_type == 'game_action' and data.get('action') == 'new_bullet':
+                        bullet_data = data.get('data', {})
+                        self.current_stage.create_network_bullet(bullet_data)
                             
                     server_msg = self.network.get_message()
 

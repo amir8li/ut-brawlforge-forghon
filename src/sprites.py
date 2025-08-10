@@ -150,9 +150,10 @@ class Cloud(Sprite):
             self.kill()
 
 class Bullet(Sprite):
-    def __init__(self, pos, surf, direction, speed, groups, rotating=True, from_who="Player"):
+    def __init__(self, pos, surf, direction, speed, groups, rotating=True, from_who="Player", network_id=None):
         scaled_surf = pygame.transform.scale(surf, (surf.get_width() * 1.5, surf.get_height() * 1.5))
         super().__init__(pos, scaled_surf, groups)
+        self.network_id = network_id
         self.original_image = scaled_surf 
         self.direction = direction
         self.speed = speed

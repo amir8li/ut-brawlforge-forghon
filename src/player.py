@@ -150,17 +150,33 @@ class Player(pygame.sprite.Sprite):
             
     def shoot(self):
         if not self.timers["shoot_cooldown"].active:
-            spawn_pos = (self.rect.centerx, self.rect.centery)
-            bullet = Bullet(
-                pos=spawn_pos,
-                surf=self.frames["bullet"][0],
-                direction=vector(1, 0) if self.face_right else vector(-1, 0),
-                speed=BULLET_SPEED,
-                groups=[self.all_sprites]
-            )
-            self.bullets.append(bullet)
-            self.bullet_sound.play()
             self.timers["shoot_cooldown"].activate()
+            self.bullet_sound.play()
+
+            is_online = self.game and self.game.mode == 'online'
+            
+            if is_online and self.is_local:
+                direction_vector = (1, 0) if self.face_right else (-1, 0)
+                packet = {
+                    "type": "game_action",
+                    "action": "shoot",
+                    "data": {
+                        "pos": list(self.rect.center),
+                        "direction": direction_vector
+                    }
+                }
+                self.game.network.send(packet)
+            
+            elif not is_online:
+                spawn_pos = (self.rect.centerx, self.rect.centery)
+                bullet = Bullet(
+                    pos=spawn_pos,
+                    surf=self.frames["bullet"][0],
+                    direction=vector(1, 0) if self.face_right else vector(-1, 0),
+                    speed=BULLET_SPEED,
+                    groups=[self.all_sprites]
+                )
+                self.bullets.append(bullet)
 
     def move(self, dt):
         if self.frozen:

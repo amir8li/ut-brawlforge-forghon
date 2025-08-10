@@ -282,7 +282,7 @@ class Server:
                      self.player_sockets[player_id])
         
         print(f"Game started in room {room_id}")
-                
+                    
     def handle_game_action(self, player_id, message):
         room_id = self.player_rooms.get(player_id)
         if not room_id: return
@@ -355,6 +355,23 @@ class Server:
                             self.handle_player_eliminated(victim_id)
                     
                     break
+
+        elif action == "shoot":
+            shoot_data = message.get("data", {})
+            
+            bullet_id = f"bullet_{player_id}_{time.time()}"
+
+            new_bullet_info = {
+                "bullet_id": bullet_id,
+                "owner_id": player_id,
+                "pos": shoot_data.get("pos"),
+                "direction": shoot_data.get("direction")
+            }
+
+            for p_id in room.players:
+                if p_id in self.player_sockets:
+                    self.send(Protocols.Response.GAME_ACTION, {"action": "new_bullet", "data": new_bullet_info}, self.player_sockets[p_id])
+                    
     def handle_player_eliminated(self, player_id):
         room_id = self.player_rooms.get(player_id)
         if not room_id:

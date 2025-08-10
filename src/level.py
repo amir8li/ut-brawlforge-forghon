@@ -6,6 +6,8 @@ from math import sin
 from itertools import chain
 from os.path import join
 
+from src.sprites import Bullet
+from config import BULLET_SPEED
 from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite, Flag
 from src.player import Player
@@ -58,6 +60,7 @@ class Level:
         self.coin_sound = audio_files['coin']
         self.coin_sound.set_volume(0.3)
         self.players = []
+        self.network_bullets = {}
         self.setup(tmx_map, level_frames, audio_files)
 
 
@@ -328,6 +331,31 @@ class Level:
                         AnimatedSprite((x, y), self.level_frames["water_top"], self.all_sprites, ZLAYERS["water"])
                     else:
                         Sprite((x, y), self.level_frames["water_body"], self.all_sprites, ZLAYERS["water"])
+
+    def create_network_bullet(self, bullet_data):
+        bullet_id = bullet_data.get('bullet_id')
+        owner_id = bullet_data.get('owner_id')
+        pos = bullet_data.get('pos')
+        direction = bullet_data.get('direction')
+
+        bullet_surf = None
+        for player in self.players:
+            if player.server_id == owner_id:
+                bullet_surf = player.frames.get("bullet", [None])[0]
+                break
+        
+        if not bullet_surf:
+            return
+
+        bullet = Bullet(
+            pos=tuple(pos),
+            surf=bullet_surf,
+            direction=vector(direction),
+            speed=BULLET_SPEED,
+            groups=[self.all_sprites],
+            network_id=bullet_id
+        )
+        self.network_bullets[bullet_id] = bullet
 
     def powerup_collision(self):
         for player in self.players:

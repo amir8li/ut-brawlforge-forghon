@@ -6,7 +6,7 @@ class Room:
         self.id = str(uuid.uuid4())
         self.players = players
         self.game_mode = game_mode 
-        self.status = "waiting"  # waiting, countdown, playing, finished
+        self.status = "waiting"
         self.created_time = datetime.now()
         self.countdown_start = None
         self.max_players = len(players)
@@ -18,9 +18,16 @@ class Room:
             self.team1 = [players[0]]
             self.team2 = [players[1]]
         
-        self.player_health = {}
+       
+        initial_health = 5 
+        self.player_health = {player_id: initial_health for player_id in players}
+        
+        self.player_states = {}
         for player_id in players:
-            self.player_health[player_id] = 100
+            self.player_states[player_id] = {
+                'pos': (0, 0), 
+                'face_right': True
+            }
 
 class RoomManager:
     def __init__(self):

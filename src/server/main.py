@@ -7,6 +7,14 @@ from datetime import datetime
 from src.server.protocols import Protocols
 from src.server.room import RoomManager
 
+def check_collision(rect1, rect2):
+    x1, y1, w1, h1 = rect1
+    x2, y2, w2, h2 = rect2
+    if (x1 < x2 + w2 and x1 + w1 > x2 and
+        y1 < y2 + h2 and y1 + h1 > y2):
+        return True
+    return False
+
 class Server:
     def __init__(self, host="127.0.0.1", port=8765):
         self.host = host
@@ -274,24 +282,79 @@ class Server:
                      self.player_sockets[player_id])
         
         print(f"Game started in room {room_id}")
-            
+                
     def handle_game_action(self, player_id, message):
-            room_id = self.player_rooms.get(player_id)
-            if not room_id: return
-            room = self.room_manager.get_room(room_id)
-            if not room: return
+        room_id = self.player_rooms.get(player_id)
+        if not room_id: return
+        room = self.room_manager.get_room(room_id)
+        if not room: return
 
-            action = message.get("action")
-            if action == "player_update":
-                message_to_forward = {
-                    "player_id": player_id,
-                    "action": action,
-                    "data": message.get("data", {})
-                }
-                for other_id in room.players:
-                    if other_id != player_id and other_id in self.player_sockets:
-                        self.send(Protocols.Response.GAME_ACTION, message_to_forward, self.player_sockets[other_id])
+        action = message.get("action")
         
+        if action == "player_update":
+            player_data = message.get("data", {})
+            
+            if player_id in room.player_states:
+                room.player_states[player_id]['pos'] = player_data.get('pos')
+                room.player_states[player_id]['face_right'] = player_data.get('face_right')
+
+            message_to_forward = {
+                "player_id": player_id,
+                "action": action,
+                "data": player_data
+            }
+            for other_id in room.players:
+                if other_id != player_id and other_id in self.player_sockets:
+                    self.send(Protocols.Response.GAME_ACTION, message_to_forward, self.player_sockets[other_id])
+
+        elif action == "attack":
+            attack_info = {"attacker_id": player_id}
+            for p_id in room.players:
+                if p_id in self.player_sockets:
+                    self.send(Protocols.Response.GAME_ACTION, {"action": "player_attacked", "data": attack_info}, self.player_sockets[p_id])
+            
+            attacker_state = room.player_states.get(player_id)
+            if not attacker_state or not attacker_state.get('pos'): return
+
+            attacker_pos = attacker_state['pos']
+            is_facing_right = attacker_state['face_right']
+            
+            attack_width = 80
+            attack_height = 60
+            
+            if is_facing_right:
+                attack_rect = (attacker_pos[0], attacker_pos[1], attack_width, attack_height)
+            else:
+                attack_rect = (attacker_pos[0] - attack_width, attacker_pos[1], attack_width, attack_height)
+            
+            for victim_id in room.players:
+                if victim_id == player_id: continue
+
+                victim_state = room.player_states.get(victim_id)
+                if not victim_state or not victim_state.get('pos'): continue
+                
+                victim_pos = victim_state['pos']
+                victim_rect = (victim_pos[0], victim_pos[1], 40, 80)
+
+                if check_collision(attack_rect, victim_rect):
+                    if room.player_health[victim_id] > 0:
+                        room.player_health[victim_id] -= 1
+                        
+                        print(f"HIT! Attacker: {player_id}, Victim: {victim_id}, New Health: {room.player_health[victim_id]}")
+
+                        damage_info = {
+                            "victim_id": victim_id,
+                            "attacker_id": player_id,
+                            "new_health": room.player_health[victim_id]
+                        }
+                        for p_id in room.players:
+                            if p_id in self.player_sockets:
+                                self.send(Protocols.Response.PLAYER_TOOK_DAMAGE, damage_info, self.player_sockets[p_id])
+                        
+                        if room.player_health[victim_id] <= 0:
+                            self.handle_player_eliminated(victim_id)
+                    
+                    break
     def handle_player_eliminated(self, player_id):
         room_id = self.player_rooms.get(player_id)
         if not room_id:

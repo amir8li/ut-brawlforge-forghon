@@ -140,6 +140,14 @@ class Player(pygame.sprite.Sprite):
             self.attack_sound.play()
             self.attacked_enemies = []
 
+            if self.game.mode == 'online' and self.is_local:
+                packet = {
+                    "type": "game_action",
+                    "action": "attack",
+                    "data": {} 
+                }
+                self.game.network.send(packet)
+            
     def shoot(self):
         if not self.timers["shoot_cooldown"].active:
             spawn_pos = (self.rect.centerx, self.rect.centery)
@@ -282,12 +290,17 @@ class Player(pygame.sprite.Sprite):
         self.hitbox_rect.x += direction * offset
         self.rect.center = self.hitbox_rect.center
 
+
     def damage(self, knockback=True):
+        if self.game and self.game.mode == 'online':
+            return
+
         if not self.is_local:
             return
 
         if self.shield_active:
             return
+            
         if not self.timers["hit"].active:
             dmg = 1
             if self.buff_damage_enabled:
@@ -296,7 +309,6 @@ class Player(pygame.sprite.Sprite):
             self.timers["hit"].activate()
             if not knockback:
                 return
-                
             
     def flicker(self):
         if self.timers["hit"].active and sin(pygame.time.get_ticks()*100) >= 0:
@@ -330,15 +342,17 @@ class Player(pygame.sprite.Sprite):
             shield_rect = shield_surface.get_rect(center=self.hitbox_rect.center)
             surface.blit(shield_surface, shield_rect)
 
+    
     def update(self, dt):
         if self.frozen:
             self.frozen_timer.update()
             if not self.frozen_timer.active:
                 self.frozen = False
 
+        self.update_timers() 
         if self.is_local:
             self.old_rect = self.hitbox_rect.copy()
-            self.update_timers()
+
             self.input()
             self.platform_move(dt)
             self.move(dt)

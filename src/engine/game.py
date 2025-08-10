@@ -181,7 +181,6 @@ class Game:
         print("DEBUG: Game.import_assets finished.")
 
     def run(self):
-        print("DEBUG: Game.run started.") 
         running = True
         while running:
             dt = self.clock.tick(FPS) / 1000
@@ -195,11 +194,9 @@ class Game:
                     pygame.quit()
                     sys.exit()
 
-            # --- این بلوک کد اصلاح شده و بازگردانده شده است ---
             if self.boss_sequence_requested:
                 if self.bg_sound: self.bg_sound.stop()
                 return "start_boss_sequence"
-            # --- پایان بخش اصلاح شده ---
 
             if self.mode == 'online' and self.network:
                 local_player = self.current_stage.get_local_player()
@@ -209,18 +206,44 @@ class Game:
 
                 server_msg = self.network.get_message()
                 while server_msg:
-                    if server_msg.get('type') == 'game_action':
-                        data = server_msg.get('data', {})
+                    msg_type = server_msg.get('type')
+                    data = server_msg.get('data', {})
+
+                    if msg_type == 'game_action' and data.get('action') == 'player_update':
                         sender_id = data.get('player_id')
                         remote_player = None
                         for p in self.current_stage.players:
                             if p.server_id == sender_id:
                                 remote_player = p
                                 break
-                        
                         if remote_player:
-                            if data.get('action') == 'player_update':
-                                remote_player.update_from_network(data.get('data', {}))
+                            remote_player.update_from_network(data.get('data', {}))
+                    
+                    elif msg_type == 'player_took_damage':
+                        victim_id = data.get('victim_id')
+                        new_health = data.get('new_health')
+                        victim_player = None
+                        for p in self.current_stage.players:
+                            if p.server_id == victim_id:
+                                victim_player = p
+                                break
+                        if victim_player:
+                            victim_player.data.health = new_health
+                            if not victim_player.timers['hit'].active:
+                                victim_player.timers['hit'].activate()
+                                victim_player.damaged_sound.play()
+                    
+                    elif msg_type == 'game_action' and data.get('action') == 'player_attacked':
+                        attacker_id = data.get('data', {}).get('attacker_id')
+                        attacker_player = None
+                        for p in self.current_stage.players:
+                            if p.server_id == attacker_id:
+                                attacker_player = p
+                                break
+                        if attacker_player:
+                            attacker_player.attacking = True
+                            attacker_player.frame_index = 0
+                            
                     server_msg = self.network.get_message()
 
             self.current_stage.update(dt) 

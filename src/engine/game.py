@@ -38,10 +38,13 @@ class Game:
             player_names_dict = {}
 
             if self.mode == 'online':
-                num_players = len(self.online_game_data['players'])
-                player_names_dict = {0: self.player_names[0]}
-                for i in range(1, num_players):
-                    player_names_dict[i] = f"Opponent {i}"
+                player_details = self.online_game_data['players']
+                num_players = len(player_details)
+              
+                usernames = [details['username'] for details in player_details.values()]
+                
+                player_names_dict = {i: name for i, name in enumerate(usernames)}
+
             elif self.mode == 'multi':
                 num_players = len(self.player_names)
                 player_names_dict = {i: name for i, name in enumerate(self.player_names)}
@@ -174,7 +177,7 @@ class Game:
             "coin": import_image("src", "assets", "images", "ui", "coin"),
         }
         self.font = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 40)
-# در فایل src/engine/game.py، داخل کلاس Game
+        
         print("DEBUG: Game.import_assets finished.")
 
     def run(self):
@@ -209,18 +212,19 @@ class Game:
                     if server_msg.get('type') == 'game_action':
                         data = server_msg.get('data', {})
                         sender_id = data.get('player_id')
-                        all_ids = self.online_game_data['players']
-                        if sender_id and sender_id in all_ids:
-                            try:
-                                p_index = all_ids.index(sender_id)
-                                remote_player = self.current_stage.players[p_index]
-                                if data.get('action') == 'player_update':
-                                    remote_player.update_from_network(data.get('data', {}))
-                            except (ValueError, IndexError): pass
+                        remote_player = None
+                        for p in self.current_stage.players:
+                            if p.server_id == sender_id:
+                                remote_player = p
+                                break
+                        
+                        if remote_player:
+                            if data.get('action') == 'player_update':
+                                remote_player.update_from_network(data.get('data', {}))
                     server_msg = self.network.get_message()
 
-            self.current_stage.update(dt) # آپدیت مرحله بعد از شبکه
-            self.current_stage.handle_events(events) # هندل کردن ایونت‌ها
+            self.current_stage.update(dt) 
+            self.current_stage.handle_events(events) 
             
             self.screen.fill("#91a7d0")
             self.current_stage.draw(self.screen)

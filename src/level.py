@@ -1,10 +1,10 @@
-# src/level.py (نسخه نهایی و کامل)
 import pygame
 import os
 from pygame import Vector2 as vector
 from random import uniform
 from math import sin
 from itertools import chain
+from os.path import join
 
 from config import *
 from src.sprites import Sprite, MovingSprite, AnimatedSprite, Item, Spike, ParticleEffectSprite, Flag
@@ -113,37 +113,59 @@ class Level:
         if not player_positions:
             player_positions = [(100, 200), (300, 200), (400, 200), (500, 200)]
 
+        self.players = [] 
         is_online_mode = self.game and self.game.mode == 'online'
-        my_player_id_from_server = self.game.network.player_id if is_online_mode else None
-        all_player_ids_from_server = self.game.online_game_data['players'] if is_online_mode else []
 
-        for i, data in enumerate(self.data):
-            player_pos = player_positions[i % len(player_positions)]
-            player_character_frames = self.level_frames["player"][i]
+        if is_online_mode:
+            player_details = self.game.online_game_data['players'] 
+            my_server_id = self.game.network.player_id
 
-            player = Player(
-                pos=player_pos,
-                groups=self.all_sprites,
-                collision_sprites=self.collision_sprites,
-                semi_collision_sprites=self.semi_collision_sprites,
-                frames=player_character_frames,
-                sounds=self.audio_files,
-                data=data,
-                player_id=i,
-                game=self.game
-            )
-
-            player.username = data.name
-
-            if is_online_mode:
-                if all_player_ids_from_server[i] == my_player_id_from_server:
-                    player.is_local = True
-            elif self.game.mode == 'multi':
-                player.is_local = True 
-            elif i == 0:
-                player.is_local = True
+            for i, (server_id, details) in enumerate(player_details.items()):
+                player_pos = player_positions[i % len(player_positions)]
+                username = details['username']
                 
-            self.players.append(player)
+                character_frames = self.level_frames["player"][i % len(self.level_frames["player"])]
+
+                player = Player(
+                    pos=player_pos,
+                    groups=self.all_sprites,
+                    collision_sprites=self.collision_sprites,
+                    semi_collision_sprites=self.semi_collision_sprites,
+                    frames=character_frames,
+                    sounds=self.audio_files,
+                    data=self.game.data[i], 
+                    player_id=i,           
+                    game=self.game,
+                    server_id=server_id,   
+                    username=username      
+                )
+
+                if server_id == my_server_id:
+                    player.is_local = True 
+
+                self.players.append(player)
+
+        else:
+            for i, data in enumerate(self.data):
+                player_pos = player_positions[i % len(player_positions)]
+
+                player_character_frames = self.level_frames["player"][i % len(self.level_frames["player"])]
+
+                player = Player(
+                    pos=player_pos,
+                    groups=self.all_sprites,
+                    collision_sprites=self.collision_sprites,
+                    semi_collision_sprites=self.semi_collision_sprites,
+                    frames=player_character_frames,
+                    sounds=self.audio_files,
+                    data=data,
+                    player_id=i,
+                    game=self.game,
+                    username=data.name 
+                )
+                player.is_local = True 
+                self.players.append(player)
+        
 
         all_collision_sprites = pygame.sprite.Group(chain(self.collision_sprites.sprites(), self.platform_sprites_for_enemies.sprites()))
         for obj in tmx_map.get_layer_by_name("Enemies"):
@@ -458,58 +480,68 @@ class Level:
             self.display.blit(shadow_text, shadow_rect)
             self.display.blit(text, text_rect)
 
+    def draw_usernames(self, surface):
+        for player in self.players:
+            pos_x = player.rect.centerx + self.all_sprites.offset.x
+            pos_y = player.rect.top + self.all_sprites.offset.y - 12 
+            username_font = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 22)
+           
+            text_surf = username_font.render(player.username, True, (255, 255, 255))
+            text_rect = text_surf.get_rect(center=(pos_x, pos_y))
+            
+            shadow_surf = username_font.render(player.username, True, (0, 0, 0))
+            shadow_rect = shadow_surf.get_rect(center=(pos_x + 1, pos_y + 1))
+
+            surface.blit(shadow_surf, shadow_rect)
+            surface.blit(text_surf, text_rect)
+
 
     def draw_boss_health(self):
         if self.boss_sprites:
             boss = self.boss_sprites.sprites()[0]
-            # Draw health bar at the top of the screen
             bar_width = 400
             bar_height = 20
             bar_x = (self.display.get_width() - bar_width) // 2
             bar_y = 20
-            
-            # Background bar
+           
             pygame.draw.rect(self.display, (100, 0, 0), (bar_x, bar_y, bar_width, bar_height))
             
-            # Health bar
             health_percentage = boss.health / boss.max_health
             health_width = int(bar_width * health_percentage)
             pygame.draw.rect(self.display, (200, 0, 0), (bar_x, bar_y, health_width, bar_height))
             
-            # Border
             pygame.draw.rect(self.display, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 2)
             
-            # Boss name
             boss_text = self.font.render("BOSS", True, (255, 255, 255))
             boss_rect = boss_text.get_rect(center=(self.display.get_width() // 2, bar_y - 15))
             self.display.blit(boss_text, boss_rect)
 
     def draw_fog_of_war(self):
         if self.is_boss_level:
-            # Create a surface for the fog effect
             fog_surface = pygame.Surface((self.display.get_width(), self.display.get_height()), pygame.SRCALPHA)
 
-            # Get player's screen position
             camera_offset = self.all_sprites.offset
             player_screen_pos = (
                 int(self.players[0].hitbox_rect.centerx + camera_offset.x),
                 int(self.players[0].hitbox_rect.centery + camera_offset.y)
             )
 
-            # Make the fog less opaque for better readability
-            base_alpha = 120  # was 220
+            base_alpha = 120  
             fog_surface.fill((0, 0, 0, base_alpha))
 
-            # Create a gradient effect for a soft edge, also less opaque
             for i in range(60):
                 radius = self.fog_radius - i * 3
-                alpha = base_alpha - i * 2  # softer gradient
+                alpha = base_alpha - i * 2  
                 if radius > 0 and alpha > 0:
                     pygame.draw.circle(fog_surface, (0, 0, 0, alpha), player_screen_pos, radius)
 
-            # Blit the fog surface onto the display
             self.display.blit(fog_surface, (0, 0))
 
+    def get_local_player(self):
+        for player in self.players:
+            if player.is_local:
+                return player
+        return None
 
     def update(self, dt):
         self.all_sprites.update(dt)
@@ -528,7 +560,6 @@ class Level:
 
     def draw(self, surface):
         self.all_sprites.custom_draw(self.players[0] if len(self.players) == 1 else self.players)
-
         for boss in self.boss_sprites:
             if hasattr(boss, 'draw_talk'):
                 boss.draw_talk(surface, self.font)
@@ -537,9 +568,5 @@ class Level:
         self.draw_fog_of_war()
         for player in self.players:
             player.draw_shield(surface)
-
-    def get_local_player(self):
-        for player in self.players:
-            if player.is_local:
-                return player
-        return None
+        if self.game and self.game.mode == 'online':
+            self.draw_usernames(surface)

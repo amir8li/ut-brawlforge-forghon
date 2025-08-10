@@ -6,11 +6,13 @@ from src.timer import Timer
 from src.sprites import Bullet
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, sounds, data, player_id=0, game=None):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, sounds, data, player_id=0, game=None, server_id=None, username="Player"):
         super().__init__(groups)
         self.game = game
         self.is_local = False 
         self.username = "Player"
+        self.server_id = server_id
+        self.username = username
         self.network_pos = vector(pos)
 
         self.is_player = True
@@ -27,17 +29,13 @@ class Player(pygame.sprite.Sprite):
         self.sounds = sounds
         self.player_id = player_id
         self.bullets = []
-
-        if self.data.name == "player2":
-            for key in self.frames:
-                self.frames[key] = [pygame.transform.smoothscale(img, (img.get_width()*2, img.get_height()*2)) for img in self.frames[key]]
         
         self.image = self.frames[self.state][self.frame_index]
         self.z = ZLAYERS["main"]
         adjusted_pos = list(pos)
 
         if self.data.name == "player3":
-            adjusted_pos[1] += 30
+           adjusted_pos[1] += 30
             
         self.rect = self.image.get_rect(topleft=adjusted_pos)
         self.hitbox_rect = self.rect.inflate(-76, -36)

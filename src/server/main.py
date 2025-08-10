@@ -161,7 +161,7 @@ class Server:
             ready_players = self.room_manager.get_ready_players("2v2", 2)
             if len(ready_players) < 2:
                 self.send(Protocols.Response.ERROR, "Not enough players for 2v2 game", 
-                         self.player_sockets[player1_id])
+                          self.player_sockets[player1_id])
                 return
             players = [player1_id, player2_id] + ready_players
         
@@ -174,9 +174,13 @@ class Server:
         
         print(f"Created direct {game_mode} game room {room_id}")
         
+        player_details = {
+            p_id: {"username": self.player_usernames.get(p_id, "Unknown")} for p_id in players
+        }
+
         room_message = {
             "room_id": room_id,
-            "players": players,
+            "players": player_details, 
             "game_mode": game_mode,
             "team1": room.team1,
             "team2": room.team2
@@ -184,7 +188,7 @@ class Server:
         
         for player_id in players:
             self.send(Protocols.Response.ROOM_CREATED, room_message, 
-                     self.player_sockets[player_id])
+                      self.player_sockets[player_id])
         
         self.start_countdown(room_id)
     
@@ -230,15 +234,19 @@ class Server:
             self.player_rooms[player_id] = room_id
         
         print(f"Created {game_mode} room {room_id} with players: {players}")
+
+        player_details = {
+            p_id: {"username": self.player_usernames.get(p_id, "Unknown")} for p_id in players
+        }
         
         room_message = {
             "room_id": room_id,
-            "players": players,
+            "players": player_details,
             "game_mode": game_mode,
             "team1": room.team1,
             "team2": room.team2
         }
-        
+       
         for player_id in players:
             if player_id in self.player_sockets:
                 self.send(Protocols.Response.ROOM_CREATED, room_message, self.player_sockets[player_id])

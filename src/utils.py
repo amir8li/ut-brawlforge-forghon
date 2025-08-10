@@ -98,16 +98,17 @@ class UI:
         name_surf = self.name_font.render(name, True, (255, 255, 255))
         shadow_surf = self.name_font.render(name, True, (0, 0, 0))
 
-        y_offset = self.heart_frames[0].get_height() + 4
-
-        if player_id == 0 or player_id == 1:
+        if player_id == 0 or player_id == 1: 
+            y_offset = self.heart_frames[0].get_height() + 4
             y = 10 + y_offset
-        else:
-            y = SCREEN_SIZE[1] - 10 - y_offset
+        else: 
+            heart_y_pos = SCREEN_SIZE[1] - 40 - self.heart_frames[0].get_height()
+            y = heart_y_pos - name_surf.get_height() - 2 
+
         
-        if player_id == 0 or player_id == 2:
+        if player_id == 0 or player_id == 2: 
             x = 10
-        else:
+        else: 
             x = SCREEN_SIZE[0] - 10 - name_surf.get_width()
         
         pos = (x, y)

@@ -357,6 +357,27 @@ class Level:
         )
         self.network_bullets[bullet_id] = bullet
 
+    def update_network_bullets(self, bullets_data):
+        if not self.game or self.game.mode != 'online':
+            return
+
+        active_bullet_ids = {bullet['bullet_id'] for bullet in bullets_data}
+
+        bullets_to_remove = [b_id for b_id in self.network_bullets if b_id not in active_bullet_ids]
+        for b_id in bullets_to_remove:
+            if b_id in self.network_bullets:
+                self.network_bullets[b_id].kill()
+                del self.network_bullets[b_id]
+
+        for bullet_data in bullets_data:
+            bullet_id = bullet_data['bullet_id']
+            if bullet_id not in self.network_bullets:
+                self.create_network_bullet(bullet_data)
+            else:
+                bullet = self.network_bullets[bullet_id]
+                bullet.pos.x, bullet.pos.y = bullet_data['pos']
+                bullet.rect.center = bullet.pos
+
     def powerup_collision(self):
         for player in self.players:
             collided_powerups = pygame.sprite.spritecollide(player, self.powerup_sprites, True)
@@ -494,7 +515,7 @@ class Level:
 
     def draw_ui_elements(self):
         if self.near_flag and not self.boss_fight_started:
-            pulse = abs(sin(pygame.time.get_ticks() * 0.005)) * 0.3 + 0.7  # Pulse between 0.7 and 1.0
+            pulse = abs(sin(pygame.time.get_ticks() * 0.005)) * 0.3 + 0.7  
             
             gold_color = (int(255 * pulse), int(215 * pulse), 0)
             shadow_color = (int(139 * pulse), int(69 * pulse), int(19 * pulse))

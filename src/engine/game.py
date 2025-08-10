@@ -179,7 +179,7 @@ class Game:
         self.font = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 40)
         
         print("DEBUG: Game.import_assets finished.")
-
+        
     def run(self):
         running = True
         while running:
@@ -201,7 +201,16 @@ class Game:
             if self.mode == 'online' and self.network:
                 local_player = self.current_stage.get_local_player()
                 if local_player:
-                    packet = { "type": "game_action", "action": "player_update", "data": { 'pos': list(local_player.hitbox_rect.topleft), 'state': local_player.state, 'face_right': local_player.face_right, 'health': local_player.data.health }}
+                    packet = {
+                        "type": "game_action",
+                        "action": "player_update",
+                        "data": {
+                            'pos': list(local_player.hitbox_rect.topleft),
+                            'state': local_player.state,
+                            'face_right': local_player.face_right,
+                            'health': local_player.data.health
+                        }
+                    }
                     self.network.send(packet)
 
                 server_msg = self.network.get_message()
@@ -209,16 +218,37 @@ class Game:
                     msg_type = server_msg.get('type')
                     data = server_msg.get('data', {})
 
-                    if msg_type == 'game_action' and data.get('action') == 'player_update':
-                        sender_id = data.get('player_id')
-                        remote_player = None
-                        for p in self.current_stage.players:
-                            if p.server_id == sender_id:
-                                remote_player = p
-                                break
-                        if remote_player:
-                            remote_player.update_from_network(data.get('data', {}))
-                    
+                    if msg_type == 'game_action':
+                        action = data.get('action')
+                        if action == 'player_update':
+                            sender_id = data.get('player_id')
+                            remote_player = None
+                            for p in self.current_stage.players:
+                                if p.server_id == sender_id:
+                                    remote_player = p
+                                    break
+                            if remote_player:
+                                remote_player.update_from_network(data.get('data', {}))
+                        
+                        elif action == 'player_attacked':
+                            attacker_id = data.get('data', {}).get('attacker_id')
+                            attacker_player = None
+                            for p in self.current_stage.players:
+                                if p.server_id == attacker_id:
+                                    attacker_player = p
+                                    break
+                            if attacker_player:
+                                attacker_player.attacking = True
+                                attacker_player.frame_index = 0
+                        
+                        elif action == 'new_bullet':
+                            bullet_data = data.get('data', {})
+                            self.current_stage.create_network_bullet(bullet_data)
+                        
+                        elif action == 'bullets_update':
+                            bullets_data = data.get('data', [])
+                            self.current_stage.update_network_bullets(bullets_data)
+                            
                     elif msg_type == 'player_took_damage':
                         victim_id = data.get('victim_id')
                         new_health = data.get('new_health')
@@ -233,21 +263,10 @@ class Game:
                                 victim_player.timers['hit'].activate()
                                 victim_player.damaged_sound.play()
                     
-                    elif msg_type == 'game_action' and data.get('action') == 'player_attacked':
-                        attacker_id = data.get('data', {}).get('attacker_id')
-                        attacker_player = None
-                        for p in self.current_stage.players:
-                            if p.server_id == attacker_id:
-                                attacker_player = p
-                                break
-                        if attacker_player:
-                            attacker_player.attacking = True
-                            attacker_player.frame_index = 0
-
-                    elif msg_type == 'game_action' and data.get('action') == 'new_bullet':
-                        bullet_data = data.get('data', {})
-                        self.current_stage.create_network_bullet(bullet_data)
-                            
+                    elif msg_type == 'game_ended':
+                        game_result = data.get('reason')
+                        return game_result
+            
                     server_msg = self.network.get_message()
 
             self.current_stage.update(dt) 
@@ -262,3 +281,5 @@ class Game:
             if result: 
                 if self.bg_sound: self.bg_sound.stop()
                 return result
+                
+        return "menu"

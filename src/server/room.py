@@ -6,6 +6,7 @@ class Room:
         self.id = str(uuid.uuid4())
         self.players = players
         self.game_mode = game_mode 
+        self.bullets = {}
         self.status = "waiting"
         self.created_time = datetime.now()
         self.countdown_start = None

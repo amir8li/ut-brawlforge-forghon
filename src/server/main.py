@@ -7,6 +7,8 @@ from datetime import datetime
 from src.server.protocols import Protocols
 from src.server.room import RoomManager
 
+BULLET_SPEED = 700
+
 def check_collision(rect1, rect2):
     x1, y1, w1, h1 = rect1
     x2, y2, w2, h2 = rect2
@@ -29,10 +31,10 @@ class Server:
         self.player_rooms = {}  
         self.player_usernames = {}  
         self.username_to_player = {} 
-        
         self.room_manager = RoomManager()
         
         print(f"Server started on {self.host}:{self.port}")
+
 
     def handle_connect(self, client):
         try:
@@ -358,20 +360,21 @@ class Server:
 
         elif action == "shoot":
             shoot_data = message.get("data", {})
-            
+
             bullet_id = f"bullet_{player_id}_{time.time()}"
 
-            new_bullet_info = {
+            new_bullet = {
                 "bullet_id": bullet_id,
                 "owner_id": player_id,
-                "pos": shoot_data.get("pos"),
+                "pos": list(shoot_data.get("pos")),
                 "direction": shoot_data.get("direction")
             }
+            room.bullets[bullet_id] = new_bullet
 
             for p_id in room.players:
                 if p_id in self.player_sockets:
-                    self.send(Protocols.Response.GAME_ACTION, {"action": "new_bullet", "data": new_bullet_info}, self.player_sockets[p_id])
-                    
+                    self.send(Protocols.Response.GAME_ACTION, {"action": "new_bullet", "data": new_bullet}, self.player_sockets[p_id])
+
     def handle_player_eliminated(self, player_id):
         room_id = self.player_rooms.get(player_id)
         if not room_id:
@@ -482,8 +485,29 @@ class Server:
         except Exception as e:
             print(f"Error sending message: {e}")
 
+    # server/main.py
+# ... (داخل کلاس Server)
+
+    def game_loop(self):
+        while True:
+            for room_id in list(self.room_manager.rooms.keys()):
+                room = self.room_manager.get_room(room_id)
+                if room and room.status == "playing":
+                    self.update_room_bullets(room)
+
+                    bullets_data = list(room.bullets.values())
+                    for player_id in room.players:
+                        if player_id in self.player_sockets:
+                            self.send(Protocols.Response.GAME_ACTION, {"action": "bullets_update", "data": bullets_data}, self.player_sockets[player_id])
+            time.sleep(1/60)
+
     def receive(self):
         print("Waiting for connections...")
+        game_loop_thread = threading.Thread(target=self.game_loop)
+        game_loop_thread = threading.Thread(target=self.game_loop)
+        game_loop_thread.daemon = True
+        game_loop_thread.start()
+
         while True:
             try:
                 client, address = self.server.accept()
@@ -532,6 +556,49 @@ class Server:
         else:
             print(f"Player {respondee_id} declined invite from {inviter_id}.")
             self.send(Protocols.Response.INVITE_DECLINED, {"respondee_id": respondee_id}, self.player_sockets[inviter_id])
+
+    BULLET_SPEED = 200
+
+    def update_room_bullets(self, room):
+        bullets_to_remove = []
+        
+        for bullet_id, bullet in list(room.bullets.items()):
+            bullet['pos'][0] += bullet['direction'][0] * BULLET_SPEED / 60
+            bullet['pos'][1] += bullet['direction'][1] * BULLET_SPEED / 60
+            
+            for victim_id in room.players:
+                if victim_id == bullet['owner_id']:
+                    continue
+                
+                victim_state = room.player_states.get(victim_id)
+                if not victim_state or not victim_state.get('pos'):
+                    continue
+    
+                bullet_rect = (bullet['pos'][0], bullet['pos'][1], 10, 10) 
+                victim_rect = (victim_state['pos'][0], victim_state['pos'][1], 40, 80)
+                
+                if check_collision(bullet_rect, victim_rect):
+                    print(f"Bullet collision! Bullet from {bullet['owner_id']} hit {victim_id}")
+                    if room.player_health[victim_id] > 0:
+                        room.player_health[victim_id] -= 1
+                        damage_info = {
+                            "victim_id": victim_id,
+                            "attacker_id": bullet['owner_id'],
+                            "new_health": room.player_health[victim_id]
+                        }
+                        for p_id in room.players:
+                            if p_id in self.player_sockets:
+                                self.send(Protocols.Response.PLAYER_TOOK_DAMAGE, damage_info, self.player_sockets[p_id])
+
+                    bullets_to_remove.append(bullet_id)
+                    break
+            
+            if bullet['pos'][0] < 0 or bullet['pos'][0] > 1920 or bullet['pos'][1] < 0 or bullet['pos'][1] > 1080:
+                bullets_to_remove.append(bullet_id)
+
+        for bullet_id in bullets_to_remove:
+            if bullet_id in room.bullets:
+                del room.bullets[bullet_id]
 
  
 if __name__ == "__main__":

@@ -147,7 +147,7 @@ class Player(pygame.sprite.Sprite):
                     "data": {} 
                 }
                 self.game.network.send(packet)
-            
+   
     def shoot(self):
         if not self.timers["shoot_cooldown"].active:
             self.timers["shoot_cooldown"].activate()
@@ -156,7 +156,7 @@ class Player(pygame.sprite.Sprite):
             is_online = self.game and self.game.mode == 'online'
             
             if is_online and self.is_local:
-                direction_vector = (1, 0) if self.face_right else (-1, 0)
+                direction_vector = [1, 0] if self.face_right else [-1, 0]
                 packet = {
                     "type": "game_action",
                     "action": "shoot",
@@ -177,7 +177,7 @@ class Player(pygame.sprite.Sprite):
                     groups=[self.all_sprites]
                 )
                 self.bullets.append(bullet)
-
+                
     def move(self, dt):
         if self.frozen:
             return

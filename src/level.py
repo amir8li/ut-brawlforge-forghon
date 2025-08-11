@@ -120,13 +120,15 @@ class Level:
         is_online_mode = self.game and self.game.mode == 'online'
 
         if is_online_mode:
+            # --- تمام منطق ساخت بازیکنان آنلاین اینجا قرار می‌گیرد ---
             player_details = self.game.online_game_data['players'] 
             my_server_id = self.game.network.player_id
+            team1_ids = self.game.online_game_data.get('team1', [])
+            team2_ids = self.game.online_game_data.get('team2', [])
 
             for i, (server_id, details) in enumerate(player_details.items()):
                 player_pos = player_positions[i % len(player_positions)]
                 username = details['username']
-                
                 character_frames = self.level_frames["player"][i % len(self.level_frames["player"])]
 
                 player = Player(
@@ -136,12 +138,17 @@ class Level:
                     semi_collision_sprites=self.semi_collision_sprites,
                     frames=character_frames,
                     sounds=self.audio_files,
-                    data=self.game.data[i], 
-                    player_id=i,           
+                    data=self.game.data[i],
+                    player_id=i,
                     game=self.game,
-                    server_id=server_id,   
-                    username=username      
+                    server_id=server_id,
+                    username=username
                 )
+                
+                if server_id in team1_ids:
+                    player.team = 1
+                elif server_id in team2_ids:
+                    player.team = 2
 
                 if server_id == my_server_id:
                     player.is_local = True 
@@ -151,7 +158,6 @@ class Level:
         else:
             for i, data in enumerate(self.data):
                 player_pos = player_positions[i % len(player_positions)]
-
                 player_character_frames = self.level_frames["player"][i % len(self.level_frames["player"])]
 
                 player = Player(
@@ -168,6 +174,7 @@ class Level:
                 )
                 player.is_local = True 
                 self.players.append(player)
+        
         
 
         all_collision_sprites = pygame.sprite.Group(chain(self.collision_sprites.sprites(), self.platform_sprites_for_enemies.sprites()))
@@ -487,10 +494,8 @@ class Level:
                 
     def flag_interaction(self):
         if self.flag_sprites and not self.boss_fight_started:
-            flag = self.flag_sprites.sprites()[0]  # Assuming one flag per level
-            # Use the first player for single player mode
+            flag = self.flag_sprites.sprites()[0] 
             player = self.players[0]
-            # Check if player is close enough to interact
             self.near_flag = flag.can_interact(player.hitbox_rect)
 
         
@@ -529,13 +534,25 @@ class Level:
             self.display.blit(shadow_text, shadow_rect)
             self.display.blit(text, text_rect)
 
+
     def draw_usernames(self, surface):
+        TEAM_COLORS = {
+            1: (100, 150, 255),  
+            2: (255, 100, 100),  
+            None: (255, 255, 255)
+        }
+
         for player in self.players:
+            if not hasattr(player, 'server_id'): continue
+
             pos_x = player.rect.centerx + self.all_sprites.offset.x
             pos_y = player.rect.top + self.all_sprites.offset.y - 12 
             username_font = pygame.font.Font(join("src", "assets", "images", "ui", "runescape_uf.ttf"), 22)
-           
-            text_surf = username_font.render(player.username, True, (255, 255, 255))
+              
+            color = TEAM_COLORS.get(getattr(player, 'team', None), TEAM_COLORS[None])
+            
+            text_surf = username_font.render(player.username, True, color)
+
             text_rect = text_surf.get_rect(center=(pos_x, pos_y))
             
             shadow_surf = username_font.render(player.username, True, (0, 0, 0))
@@ -605,10 +622,20 @@ class Level:
         if self.multiplayer:
             self.powerup_collision()
 
-        self.all_sprites.draw(self.players[0].hitbox_rect.center, dt)
+        local_player = self.get_local_player()
+        if local_player:
+            self.all_sprites.draw(local_player.hitbox_rect.center, dt)
+        elif self.players: 
+            self.all_sprites.draw(self.players[0].hitbox_rect.center, dt)
 
     def draw(self, surface):
-        self.all_sprites.custom_draw(self.players[0] if len(self.players) == 1 else self.players)
+        camera_target = self.get_local_player()
+        if not camera_target and self.players: 
+            camera_target = self.players[0]
+        
+        if camera_target:
+             self.all_sprites.custom_draw(camera_target)
+
         for boss in self.boss_sprites:
             if hasattr(boss, 'draw_talk'):
                 boss.draw_talk(surface, self.font)

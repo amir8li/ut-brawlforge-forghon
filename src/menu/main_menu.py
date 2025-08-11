@@ -27,6 +27,7 @@ class MainMenu:
         font_path = os.path.join("src", "assets", "images", "menu", "fonts", "runescape_uf.ttf")
         self.font = pygame.font.Font(font_path, 36)
         self.title_font = pygame.font.Font(font_path, 64)
+        self.small_font = pygame.font.Font(font_path, 24)
 
         self.candle_frames = import_folder("src", "assets", "images", "level", "candle")
         self.candle_light_frames = import_folder("src", "assets", "images", "level", "candle light")
@@ -57,7 +58,7 @@ class MainMenu:
 
     def create_buttons(self):
         self.buttons.append(Button("START", (SCREEN_SIZE[0] // 2, 280), self.font, lambda: self.select("start")))
-        self.buttons.append(Button("ONLINE GAME", (SCREEN_SIZE[0] // 2, 360), self.font, lambda: self.select("online")))
+        self.buttons.append(Button("ONLINE GAME", (SCREEN_SIZE[0] // 2, 360), self.small_font, lambda: self.select("online")))
         self.buttons.append(Button("OPTIONS", (SCREEN_SIZE[0] // 2, 440), self.font, lambda: self.select("options")))
         self.buttons.append(Button("QUIT", (SCREEN_SIZE[0] // 2, 520), self.font, lambda: self.select("quit")))
 

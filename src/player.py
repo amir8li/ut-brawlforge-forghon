@@ -13,6 +13,7 @@ class Player(pygame.sprite.Sprite):
         self.username = "Player"
         self.server_id = server_id
         self.username = username
+        self.team = None
         self.network_pos = vector(pos)
 
         self.is_player = True

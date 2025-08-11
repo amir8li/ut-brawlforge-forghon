@@ -16,7 +16,7 @@ class InviteScreen:
 
         font_path = os.path.join("src", "assets", "images", "menu", "fonts", "runescape_uf.ttf")
         self.font = pygame.font.Font(font_path, 36)
-        self.small_font = pygame.font.Font(font_path, 24)
+        self.small_font = pygame.font.Font(font_path, 22)
         self.title_font = pygame.font.Font(font_path, 48)
 
         self.input_rect = pygame.Rect(SCREEN_SIZE[0] // 2 - 250, 300, 500, 50)
@@ -24,7 +24,7 @@ class InviteScreen:
         self.active = True
         self.feedback_message = ""
         
-        self.invite_button = Button("SEND INVITE", (SCREEN_SIZE[0] // 2, 400), self.font, self.send_invite)
+        self.invite_button = Button("SEND INVITE", (SCREEN_SIZE[0] // 2, 400), self.small_font, self.send_invite)
         self.back_button = Button("BACK", (SCREEN_SIZE[0] // 2, 500), self.font, self.go_back)
         self.choice = None
 
@@ -38,8 +38,6 @@ class InviteScreen:
             self.running = False
         else:
             self.feedback_message = "Player ID cannot be empty!"
-
-# در کلاس InviteScreen
 
     def run(self, message=""):
         self.feedback_message = message

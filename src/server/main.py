@@ -332,6 +332,12 @@ class Server:
             for victim_id in room.players:
                 if victim_id == player_id: continue
 
+                if room.game_mode == "2v2":
+                    is_teammate = (player_id in room.team1 and victim_id in room.team1) or \
+                                  (player_id in room.team2 and victim_id in room.team2)
+                    if is_teammate:
+                        continue 
+
                 victim_state = room.player_states.get(victim_id)
                 if not victim_state or not victim_state.get('pos'): continue
                 
@@ -395,36 +401,46 @@ class Server:
                              self.player_sockets[other_player_id])
             
             self.check_game_end(room_id)
-    
+ 
     def check_game_end(self, room_id):
         room = self.room_manager.get_room(room_id)
-        if not room:
+        if not room or room.status != "playing":
             return
+
+        team1_wiped_out = all(room.player_health.get(pid, 0) <= 0 for pid in room.team1)
+        team2_wiped_out = all(room.player_health.get(pid, 0) <= 0 for pid in room.team2)
+
+        winning_players_ids = None
+
+        if team1_wiped_out and not team2_wiped_out:
+            winning_players_ids = room.team2
+        elif team2_wiped_out and not team1_wiped_out:
+            winning_players_ids = room.team1
+        elif team1_wiped_out and team2_wiped_out:
+            winning_players_ids = []
+        else:
+            return
+
+        print(f"Game has ended. Winners: {winning_players_ids}")
         
-        team1_alive = sum(1 for pid in room.team1 if room.player_health.get(pid, 0) > 0)
-        team2_alive = sum(1 for pid in room.team2 if room.player_health.get(pid, 0) > 0)
+        game_end_data = {
+            "winning_team": None, 
+            "winning_players": winning_players_ids,
+            "reason": "team_eliminated"
+        }
         
-        if team1_alive == 0 or team2_alive == 0:
-            winning_team = 2 if team1_alive == 0 else 1
-            winning_players = room.team2 if team1_alive == 0 else room.team1
-            
-            game_end_data = {
-                "winning_team": winning_team,
-                "winning_players": winning_players,
-                "reason": "team_eliminated"
-            }
-            
-            for player_id in room.players:
-                self.send(Protocols.Response.GAME_ENDED, game_end_data, 
-                         self.player_sockets[player_id])
-            
-            self.room_manager.remove_room(room_id)
-            for player_id in room.players:
-                if player_id in self.player_rooms:
-                    del self.player_rooms[player_id]
+        for player_id in room.players:
+            if player_id in self.player_sockets:
+                self.send(Protocols.Response.GAME_ENDED, game_end_data, self.player_sockets[player_id])
+        
+        print(f"Cleaning up room {room_id}")
+        self.room_manager.remove_room(room_id)
+        
+        for player_id in room.players:
+            if player_id in self.player_status:
                 self.player_status[player_id] = "connected"
-            
-            print(f"Game ended in room {room_id}, team {winning_team} won")
+            if player_id in self.player_rooms:
+                del self.player_rooms[player_id]
 
     def disconnect(self, client):
         player_id = self.players.get(client)
@@ -461,21 +477,19 @@ class Server:
         if not room:
             return
 
+        print(f"Handling disconnection for player {player_id} in room {room_id}")
+
         for other_player_id in room.players:
             if other_player_id != player_id and other_player_id in self.player_sockets:
                 self.send(Protocols.Response.PLAYER_LEFT, {"player_id": player_id}, 
                           self.player_sockets[other_player_id])
-  
-        if len(room.players) <= 1:
-            if room.status == "playing":
-                for other_player_id in room.players:
-                    if other_player_id != player_id and other_player_id in self.player_sockets:
-                        self.send(Protocols.Response.GAME_ENDED, 
-                                  {"reason": "player_disconnected"}, 
-                                  self.player_sockets[other_player_id])
+ 
+        if room.status == "playing" and player_id in room.player_health:
+            room.player_health[player_id] = 0
+            print(f"Player {player_id} health set to 0 due to disconnection.")
             
-            self.room_manager.remove_room(room_id)
-            print(f"Removed room {room_id}")
+           
+            self.check_game_end(room_id)
 
     def send(self, r_type, data, client):
         try:
@@ -485,8 +499,6 @@ class Server:
         except Exception as e:
             print(f"Error sending message: {e}")
 
-    # server/main.py
-# ... (داخل کلاس Server)
 
     def game_loop(self):
         while True:
@@ -546,12 +558,12 @@ class Server:
         accepted = message.get("accepted", False)
 
         if not inviter_id or inviter_id not in self.player_sockets:
-            return # Inviter has disconnected
+            return
 
         if accepted:
             print(f"Player {respondee_id} accepted invite from {inviter_id}.")
             self.send(Protocols.Response.INVITE_ACCEPTED, {"respondee_id": respondee_id}, self.player_sockets[inviter_id])
-            time.sleep(0.1) # A small delay to ensure messages are processed
+            time.sleep(0.1) 
             self.create_direct_game(inviter_id, respondee_id, "1v1")
         else:
             print(f"Player {respondee_id} declined invite from {inviter_id}.")
@@ -570,6 +582,13 @@ class Server:
                 if victim_id == bullet['owner_id']:
                     continue
                 
+                attacker_id = bullet['owner_id']
+                if room.game_mode == "2v2":
+                    is_teammate = (attacker_id in room.team1 and victim_id in room.team1) or \
+                                  (attacker_id in room.team2 and victim_id in room.team2)
+                    if is_teammate:
+                        continue
+
                 victim_state = room.player_states.get(victim_id)
                 if not victim_state or not victim_state.get('pos'):
                     continue

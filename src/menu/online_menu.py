@@ -18,7 +18,7 @@ class OnlineMenu:
 
         font_path = os.path.join("src", "assets", "images", "menu", "fonts", "runescape_uf.ttf")
         self.font = pygame.font.Font(font_path, 32)
-        self.small_font = pygame.font.Font(font_path, 24)
+        self.small_font = pygame.font.Font(font_path, 18)
         self.title_font = pygame.font.Font(font_path, 48)
 
         self.buttons = []
@@ -33,7 +33,7 @@ class OnlineMenu:
         y_start = 250
         self.buttons.append(Button("1 vs 1", (SCREEN_SIZE[0] // 2, y_start), self.font, lambda: self.select("1v1")))
         self.buttons.append(Button("2 vs 2", (SCREEN_SIZE[0] // 2, y_start + 100), self.font, lambda: self.select("2v2")))
-        self.buttons.append(Button("INVITE A FRIEND", (SCREEN_SIZE[0] // 2, y_start + 200), self.font, lambda: self.select("invite")))
+        self.buttons.append(Button("INVITE A FRIEND", (SCREEN_SIZE[0] // 2, y_start + 200), self.small_font, lambda: self.select("invite")))
         self.buttons.append(Button("BACK", (SCREEN_SIZE[0] // 2, y_start + 300), self.font, lambda: self.select("back")))
 
     def select(self, choice):
@@ -63,7 +63,6 @@ class OnlineMenu:
         for btn in self.popup_buttons:
             btn.draw(self.surface)
 
-    # در کلاس OnlineMenu در فایل src/menu/online_menu.py
     def run(self):
         self.choice = None
         self.running = True
@@ -87,7 +86,7 @@ class OnlineMenu:
                         Button("ACCEPT", (SCREEN_SIZE[0] // 2 - 100, SCREEN_SIZE[1] // 2 + 50), self.font, lambda: self.handle_invite_response(True), size=(150, 60)),
                         Button("DECLINE", (SCREEN_SIZE[0] // 2 + 100, SCREEN_SIZE[1] // 2 + 50), self.font, lambda: self.handle_invite_response(False), size=(150, 60))
                     ]
-                # --- تغییر کلیدی: اگر بازی شروع شد، اطلاعات را ذخیره کن و خارج شو ---
+
                 elif server_msg['type'] == 'room_created' and self.game_starting:
                     self.game_data_to_return = server_msg['data']
                     self.running = False

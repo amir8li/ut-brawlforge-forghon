@@ -182,7 +182,15 @@ class Game:
         
     def run(self):
         running = True
+        
+        game_is_over = False
+        final_game_result = ""
+
         while running:
+            if game_is_over: 
+                if self.bg_sound: self.bg_sound.stop()
+                return final_game_result
+
             dt = self.clock.tick(FPS) / 1000
             dt = min(dt, 0.1)
             
@@ -199,6 +207,8 @@ class Game:
                 return "start_boss_sequence"
 
             if self.mode == 'online' and self.network:
+                players_to_remove = []
+
                 local_player = self.current_stage.get_local_player()
                 if local_player:
                     packet = {
@@ -218,56 +228,60 @@ class Game:
                     msg_type = server_msg.get('type')
                     data = server_msg.get('data', {})
 
-                    if msg_type == 'game_action':
-                        action = data.get('action')
-                        if action == 'player_update':
-                            sender_id = data.get('player_id')
-                            remote_player = None
-                            for p in self.current_stage.players:
-                                if p.server_id == sender_id:
-                                    remote_player = p
-                                    break
-                            if remote_player:
-                                remote_player.update_from_network(data.get('data', {}))
-                        
-                        elif action == 'player_attacked':
-                            attacker_id = data.get('data', {}).get('attacker_id')
-                            attacker_player = None
-                            for p in self.current_stage.players:
-                                if p.server_id == attacker_id:
-                                    attacker_player = p
-                                    break
-                            if attacker_player:
-                                attacker_player.attacking = True
-                                attacker_player.frame_index = 0
-                        
-                        elif action == 'new_bullet':
-                            bullet_data = data.get('data', {})
-                            self.current_stage.create_network_bullet(bullet_data)
-                        
-                        elif action == 'bullets_update':
-                            bullets_data = data.get('data', [])
-                            self.current_stage.update_network_bullets(bullets_data)
-                            
-                    elif msg_type == 'player_took_damage':
+                    if msg_type == 'player_took_damage':
                         victim_id = data.get('victim_id')
                         new_health = data.get('new_health')
-                        victim_player = None
-                        for p in self.current_stage.players:
-                            if p.server_id == victim_id:
-                                victim_player = p
-                                break
+                        victim_player = next((p for p in self.current_stage.players if p.server_id == victim_id), None)
+                        
                         if victim_player:
                             victim_player.data.health = new_health
                             if not victim_player.timers['hit'].active:
                                 victim_player.timers['hit'].activate()
                                 victim_player.damaged_sound.play()
+                            
+                            if new_health <= 0 and victim_player not in players_to_remove:
+                                players_to_remove.append(victim_player)
                     
                     elif msg_type == 'game_ended':
-                        game_result = data.get('reason')
-                        return game_result
-            
+                        game_is_over = True
+                        winning_ids = data.get('winning_players', [])
+                        
+                        if self.online_game_data and 'players' in self.online_game_data:
+                            player_details = self.online_game_data['players']
+                            winner_usernames = [player_details[pid]['username'] for pid in winning_ids if pid in player_details]
+                            
+                            if winner_usernames:
+                                final_game_result = " & ".join(winner_usernames) + " won!"
+                            else:
+                                final_game_result = data.get('reason', 'gameover')
+                        else:
+                            final_game_result = data.get('reason', 'gameover')
+                        
+                    elif msg_type == 'game_action':
+                        action = data.get('action')
+                        if action == 'player_update':
+                            sender_id = data.get('player_id')
+                            remote_player = next((p for p in self.current_stage.players if p.server_id == sender_id), None)
+                            if remote_player:
+                                remote_player.update_from_network(data.get('data', {}))
+                        elif action == 'player_attacked':
+                            attacker_id = data.get('data', {}).get('attacker_id')
+                            attacker_player = next((p for p in self.current_stage.players if p.server_id == attacker_id), None)
+                            if attacker_player:
+                                attacker_player.attacking = True
+                                attacker_player.frame_index = 0
+                        elif action == 'new_bullet':
+                            self.current_stage.create_network_bullet(data.get('data', {}))
+                        elif action == 'bullets_update':
+                            self.current_stage.update_network_bullets(data.get('data', []))
+
                     server_msg = self.network.get_message()
+
+                if players_to_remove:
+                    for p in players_to_remove:
+                        p.kill()
+                        if p in self.current_stage.players:
+                            self.current_stage.players.remove(p)
 
             self.current_stage.update(dt) 
             self.current_stage.handle_events(events) 
@@ -277,9 +291,10 @@ class Game:
             self.ui.update(dt)
             pygame.display.flip()
 
-            result = self.current_stage.check_constraint()
-            if result: 
-                if self.bg_sound: self.bg_sound.stop()
-                return result
-                
+            if self.mode != 'online':
+                result = self.current_stage.check_constraint()
+                if result: 
+                    if self.bg_sound: self.bg_sound.stop()
+                    return result
+                    
         return "menu"

@@ -70,7 +70,7 @@ def run_game(mode, selected_map, selected_hero, player_names, screen, audio_file
                         current_boss_level = 1
                         continue
                     return "menu"
-        return "menu" 
+        return "menu"   
 
     elif initial_result in ["win", "gameover"] or (isinstance(initial_result, str) and initial_result.endswith("won")):
         snapshot = pygame.display.get_surface().copy()

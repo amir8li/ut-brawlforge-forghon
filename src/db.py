@@ -48,21 +48,23 @@ class GameSession(Document):
     }
 
 class DB:
-    def __init__(self, db_name='brawlforge_game', host=None, port=None):
+    def __init__(self, db_name='brawlforge_game'):
         print("[DB] INIT START - DEBUG OUTPUT")
         import os
-        # Use environment variables for Docker deployment
-        if host is None:
-            host = os.getenv('MONGODB_HOST', 'mongodb')
-        if port is None:
-            port = int(os.getenv('MONGODB_PORT', '27017'))
         
-        print(f"[DB] Environment MONGODB_HOST: {os.getenv('MONGODB_HOST', 'NOT_SET')}")
-        print(f"[DB] Environment MONGODB_PORT: {os.getenv('MONGODB_PORT', 'NOT_SET')}")
-        print(f"[DB] Using host: {host}, port: {port}")
-            
-        connect(db_name, host=host, port=port)
-        print(f"[DB] Connected to MongoDB: {db_name} at {host}:{port}")
+        # Use MONGO_URI environment variable
+        mongo_uri = os.getenv('MONGO_URI')
+        
+        if mongo_uri:
+            print(f"[DB] Using MONGO_URI: {mongo_uri}")
+            connect(host=mongo_uri)
+            print(f"[DB] Connected to MongoDB using URI")
+        else:
+            # Fallback to localhost if no URI provided
+            print("[DB] No MONGO_URI found, using localhost fallback")
+            connect(db_name, host='localhost', port=27017)
+            print(f"[DB] Connected to MongoDB: {db_name} at localhost:27017")
+        
         print("[DB] INIT END - DEBUG OUTPUT")
     
     def create_player(self, player_id, username):

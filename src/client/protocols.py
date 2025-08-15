@@ -7,7 +7,6 @@ class Protocols:
         SEARCH_PLAYER = "search_player"
         REQUEST_GAME = "request_game"
         PLAYER_ELIMINATED = "player_eliminated"
-        # --- پیام‌های جدید برای دعوت ---
         INVITE_PLAYER = "invite_player"
         INVITE_RESPONSE = "invite_response"
 

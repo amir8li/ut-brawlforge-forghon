@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from src.server.protocols import Protocols
 from src.server.room import RoomManager
+from src.db import DB, Player, GameSession
 
 BULLET_SPEED = 700
 
@@ -18,12 +19,21 @@ def check_collision(rect1, rect2):
     return False
 
 class Server:
-    def __init__(self, host="127.0.0.1", port=8765):
+    def __init__(self, host="0.0.0.0", port=8765):
+        print(f"[SERVER] Initializing server on {host}:{port}")
         self.host = host
         self.port = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print(f"[SERVER] Socket created, binding to {host}:{port}")
         self.server.bind((self.host, self.port))
+        print(f"[SERVER] Successfully bound to {host}:{port}")
         self.server.listen()
+        print(f"[SERVER] Listening for connections...")
+        
+        # Initialize MongoDB connection
+        print(f"[SERVER] Connecting to MongoDB...")
+        self.db = DB()
+        print(f"[SERVER] MongoDB connection established")
         
         self.players = {}  
         self.player_sockets = {}  
@@ -106,23 +116,58 @@ class Server:
     def set_username(self, player_id, message):
         username = message.get("username")
         if not username:
-            self.send(Protocols.Response.ERROR, "Username is required", 
-                     self.player_sockets[player_id])
+            self.send(Protocols.Response.USERNAME_SET, {
+                "status": "error", 
+                "message": "Username is required"
+            }, self.player_sockets[player_id])
             return
         
-        if username in self.username_to_player and self.username_to_player[username] != player_id:
-            self.send(Protocols.Response.ERROR, "Username already taken", 
-                     self.player_sockets[player_id])
+        # Check if username already exists in MongoDB
+        existing_player = self.db.get_player_by_username(username)
+        if existing_player and existing_player.player_id != player_id:
+            self.send(Protocols.Response.USERNAME_SET, {
+                "status": "error",
+                "message": "Username already taken"
+            }, self.player_sockets[player_id])
             return
         
+        # Check if player already exists in MongoDB
+        db_player = self.db.get_player(player_id)
+        if not db_player:
+            # Create new player in MongoDB
+            db_player = self.db.create_player(player_id, username)
+            if not db_player:
+                self.send(Protocols.Response.USERNAME_SET, {
+                    "status": "error",
+                    "message": "Failed to create player account"
+                }, self.player_sockets[player_id])
+                return
+        else:
+            # Update existing player's username if different
+            if db_player.username != username:
+                db_player.username = username
+                db_player.save()
+        
+        # Set player as online
+        self.db.update_player_status(player_id, is_online=True)
+        
+        # Update local server cache
         self.player_usernames[player_id] = username
         self.username_to_player[username] = player_id
         
-        print(f"Player {player_id} set username to: {username}")
+        print(f"Player {player_id} set username to: {username} (saved to MongoDB)")
         
+        # Send response with player data from MongoDB in expected format
         self.send(Protocols.Response.USERNAME_SET, {
-            "username": username,
-            "player_id": player_id
+            "status": "success",
+            "data": {
+                "username": username,
+                "player_id": player_id,
+                "level": db_player.level,
+                "score": db_player.score,
+                "games_played": db_player.games_played,
+                "games_won": db_player.games_won
+            }
         }, self.player_sockets[player_id])
     
     def search_player(self, player_id, message):
@@ -277,6 +322,14 @@ class Server:
                          self.player_sockets[player_id])
             time.sleep(1)
         
+        # Create game session in MongoDB
+        session_id = str(uuid.uuid4())
+        player_ids = list(room.players)
+        game_session = self.db.create_game_session(session_id, room_id, player_ids)
+        if game_session:
+            room.session_id = session_id  # Store session ID in room
+            print(f"Created game session {session_id} for room {room_id}")
+        
         self.room_manager.set_room_status(room_id, "playing")
         game_start_data = {"message": "Game started!"}
         for player_id in room.players:
@@ -423,6 +476,19 @@ class Server:
 
         print(f"Game has ended. Winners: {winning_players_ids}")
         
+        # Update player stats in MongoDB
+        for player_id in room.players:
+            is_winner = player_id in winning_players_ids if winning_players_ids else False
+            score_increase = 100 if is_winner else 10  # Winners get more points
+            self.db.update_player_stats(player_id, score_increase, is_winner)
+        
+        # End game session in MongoDB
+        if hasattr(room, 'session_id'):
+            winner_username = None
+            if winning_players_ids and len(winning_players_ids) > 0:
+                winner_username = self.player_usernames.get(winning_players_ids[0], "Unknown")
+            self.db.end_game_session(room.session_id, winner_username)
+        
         game_end_data = {
             "winning_team": None, 
             "winning_players": winning_players_ids,
@@ -449,6 +515,9 @@ class Server:
         
         username = self.player_usernames.get(player_id, "Unknown")
         print(f"Player {player_id} ({username}) disconnected")
+        
+        # Set player as offline in MongoDB
+        self.db.update_player_status(player_id, is_online=False)
         
         self.room_manager.remove_from_waiting_queue(player_id)
         

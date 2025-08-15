@@ -1,0 +1,39 @@
+# Docker Compose for Game Server with MongoDB
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: game_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: brawlforge_game
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - game_network
+
+  gameserver:
+    build: .
+    container_name: game_server
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGODB_HOST=mongodb
+      - MONGODB_PORT=27017 # Internal container port
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8765
+    networks:
+      - game_network
+
+volumes:
+  mongodb_data:
+
+
+networks:
+  game_network:
+    driver: bridge

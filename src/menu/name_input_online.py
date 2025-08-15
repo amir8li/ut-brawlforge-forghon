@@ -3,10 +3,11 @@ from config import SCREEN_SIZE, FPS
 import os
 
 class NameInputOnlineScreen:
-    def __init__(self, surface, audio_files, settings):
+    def __init__(self, surface, audio_files, settings, network=None):
         self.display = surface
         self.audio_files = audio_files
         self.settings = settings
+        self.network = network
         self.clock = pygame.time.Clock()
         font_path = os.path.join("src", "assets", "images", "menu", "fonts", "runescape_uf.ttf")
         self.font = pygame.font.Font(font_path, 40)
@@ -16,6 +17,9 @@ class NameInputOnlineScreen:
         self.input_box = pygame.Rect(SCREEN_SIZE[0] // 2 - 150, 325, 300, 60)
         self.name = ""
         self.active = False
+        self.status_message = ""
+        self.status_color = (255, 255, 255)
+        self.registering = False
 
         self.button_img = pygame.image.load(os.path.join("src", "assets", "images", "menu", "button", "button1.png")).convert_alpha()
         self.highlight_img = pygame.image.load(os.path.join("src", "assets", "images", "menu", "button", "highlighted.png")).convert_alpha()
@@ -58,9 +62,32 @@ class NameInputOnlineScreen:
                             if 'type' in self.audio_files:
                                 self.audio_files['type'].play()
                         elif event.key == pygame.K_RETURN:
-                             if not self.name.strip():
-                                self.name = "Player"
-                             done = True
+                            if not self.name.strip():
+                                self.status_message = "Username cannot be empty!"
+                                self.status_color = (255, 100, 100)
+                                continue
+                            
+                            if self.network:
+                                self.registering = True
+                                self.status_message = "Registering username..."
+                                self.status_color = (255, 255, 100)
+                                
+                                # Try to register username with server
+                                success = self.network.set_username(self.name.strip())
+                                
+                                if success:
+                                    self.status_message = "✓ Username registered successfully!"
+                                    self.status_color = (100, 255, 100)
+                                    pygame.time.wait(1000)  # Show success message briefly
+                                    done = True
+                                else:
+                                    self.status_message = "✗ Username taken or server error!"
+                                    self.status_color = (255, 100, 100)
+                                
+                                self.registering = False
+                            else:
+                                # Offline mode - just accept the name
+                                done = True
                         else:
                             if len(self.name) < 10:
                                 self.name += event.unicode
@@ -83,10 +110,23 @@ class NameInputOnlineScreen:
             self.render_text_with_shadow(label, self.small_font, (225,225,225),
                 (self.input_box.x, self.input_box.y - 45))
             
-            cont = "PRESS ENTER TO CONTINUE"
-            cont_text_size = self.small_font.size(cont)
-            self.render_text_with_shadow(cont, self.small_font, (255,255,255),
-                ((SCREEN_SIZE[0] - cont_text_size[0]) // 2, 600))
+            # Show status message
+            if self.status_message:
+                status_size = self.small_font.size(self.status_message)
+                self.render_text_with_shadow(self.status_message, self.small_font, self.status_color,
+                    ((SCREEN_SIZE[0] - status_size[0]) // 2, self.input_box.y + 80))
+            
+            # Show instructions
+            if not self.registering:
+                cont = "PRESS ENTER TO REGISTER"
+                cont_text_size = self.small_font.size(cont)
+                self.render_text_with_shadow(cont, self.small_font, (255,255,255),
+                    ((SCREEN_SIZE[0] - cont_text_size[0]) // 2, 600))
+            else:
+                cont = "REGISTERING..."
+                cont_text_size = self.small_font.size(cont)
+                self.render_text_with_shadow(cont, self.small_font, (255,255,100),
+                    ((SCREEN_SIZE[0] - cont_text_size[0]) // 2, 600))
 
             pygame.display.update()
         

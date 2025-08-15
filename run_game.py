@@ -146,17 +146,41 @@ def main():
                 continue 
 
         elif menu_choice == "online":
-            name_input_screen = NameInputOnlineScreen(screen, audio_files, settings)
+            # Connect to server first
+            network = Network()
+            try:
+                # Try to connect without username initially
+                import socket
+                network.client.connect((network.host, network.port))
+                network.connected = True
+                
+                # Start receiving messages
+                import threading
+                receive_thread = threading.Thread(target=network.receive_messages)
+                receive_thread.daemon = True 
+                receive_thread.start()
+
+                # Wait for welcome message to get player ID
+                welcome_message = network.wait_for_message("welcome")
+                if welcome_message:
+                    network.player_id = welcome_message['data']['player_id']
+                    print(f"Connected to server. Player ID: {network.player_id}")
+                else:
+                    print("Failed to receive welcome message from server")
+                    continue
+                    
+            except socket.error as e:
+                print(f"Could not connect to server: {e}")
+                print("Make sure the server is running and accessible.")
+                continue
+                
+            # Now get username and register with server
+            name_input_screen = NameInputOnlineScreen(screen, audio_files, settings, network)
             username_list = name_input_screen.run()
             if not username_list or not username_list[0].strip():
+                network.disconnect()
                 continue
             username = username_list[0]
-            
-            network = Network()
-            player_id = network.connect(username)
-            if not player_id:
-                print("Could not connect to the server. Is the server running?")
-                continue
 
             online_menu = OnlineMenu(screen, audio_files, settings, network)
             online_choice_or_data = online_menu.run()

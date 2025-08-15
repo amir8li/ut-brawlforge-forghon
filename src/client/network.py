@@ -15,7 +15,7 @@ class Network:
         self.running = True
         self.connected = False
 
-    def connect(self, username):
+    def connect(self, username=None):
         try:
             self.client.connect((self.host, self.port))
             self.connected = True
@@ -28,8 +28,16 @@ class Network:
             if welcome_message:
                 self.player_id = welcome_message['data']['player_id']
                 print(f"Connected to server. My Player ID is: {self.player_id}")
-                self.set_username(username)
-                return self.player_id
+                
+                # If username provided, set it automatically
+                if username:
+                    success = self.set_username(username)
+                    if success:
+                        return self.player_id
+                    else:
+                        return None
+                else:
+                    return self.player_id
             return None
         except socket.error as e:
             print(f"Could not connect to server: {e}")
@@ -85,6 +93,43 @@ class Network:
             "username": username
         })
         print(f"Username '{username}' sent to server.")
+        
+        # Wait for server response
+        response = self.wait_for_message("username_set", timeout=10)
+        print(f"[DEBUG] Received response: {response}")  # Debug line
+        
+        if response and response.get("data", {}).get("status") == "success":
+            player_data = response.get("data", {}).get("data", {})
+            print(f"✓ Username registered successfully!")
+            print(f"  - Username: {player_data.get('username')}")
+            print(f"  - Level: {player_data.get('level', 1)}")
+            print(f"  - Score: {player_data.get('score', 0)}")
+            print(f"  - Games played: {player_data.get('games_played', 0)}")
+            print(f"  - Games won: {player_data.get('games_won', 0)}")
+            return True
+        elif response and response.get("data", {}).get("status") == "error":
+            error_msg = response.get("data", {}).get("message", "Unknown error")
+            print(f"✗ Failed to register username: {error_msg}")
+            return False
+        else:
+            error_msg = "No response from server" if not response else "Invalid response format"
+            print(f"✗ Failed to register username: {error_msg}")
+            return False
+            return False
+            
+    def get_player_stats(self):
+        """Get current player statistics from server"""
+        if not self.connected:
+            return None
+        
+        self.send({
+            "type": "get_player_stats"
+        })
+        
+        response = self.wait_for_message("player_stats", timeout=5)
+        if response and response.get("status") == "success":
+            return response.get("data", {})
+        return None
 
     def join_waiting_room(self, game_mode):
         self.send({

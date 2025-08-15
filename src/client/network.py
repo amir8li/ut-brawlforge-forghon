@@ -5,7 +5,7 @@ import time
 from src.client.protocols import Protocols
 
 class Network:
-    def __init__(self, host="127.0.0.1", port=8765):
+    def __init__(self, host="d6cf7a66-f82a-466f-9733-c3b502127ebb.hsvc.ir", port=32208):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.host = host
         self.port = port

@@ -1,58 +1,62 @@
 # UT Brawlforge
 
-## ساختار پروژه
+## Project Structure
 
-در زیر ساختار فایل‌ها و پوشه‌های اصلی پروژه به همراه توضیح مختصری از هرکدام آورده شده است:
+The following section outlines the main files and directories of the project, along with a brief description of each:
 
-```
+```text
 .
-├── config.py        # تنظیمات و پیکربندی‌های اصلی بازی (مانند ابعاد صفحه، سرعت و ...)
-├── .git             # پوشه مربوط به سیستم کنترل نسخه گیت (نادیده گرفته شود)
-├── .gitignore       # لیستی از فایل‌ها و پوشه‌هایی که توسط گیت نادیده گرفته می‌شوند
-├── README.md        # همین فایلی که در حال مطالعه آن هستید، راهنمای پروژه
-├── requirements.txt # لیست کتابخانه‌ها و وابستگی‌های لازم برای اجرای پروژه
-├── run_game.py      # اسکریپت اصلی برای اجرای بازی
-└── src              # پوشه اصلی کدهای منبع بازی
-    ├── assets       # شامل فایل‌های جانبی بازی مانند تصاویر و صداها
-    │   ├── images   # پوشه تصاویر استفاده شده در بازی
-    │   │   └── .gitkeep # یک فایل خالی برای حفظ پوشه در گیت
-    │   └── sounds   # پوشه صداهای استفاده شده در بازی
-    │       └── .gitkeep # یک فایل خالی برای حفظ پوشه در گیت
-    ├── engine       # شامل منطق اصلی و موتور بازی
-    │   ├── game.py  # کلاس‌ها و توابع اصلی مربوط به گیم‌پلی و مدیریت بازی
-    │   └── __init__.py # فایل مورد نیاز پایتون برای شناسایی این پوشه به عنوان یک پکیج
-    └── utils.py     # شامل توابع کمکی و ابزارهای عمومی مورد استفاده در پروژه
+├── config.py        # Main game settings and configuration (e.g., screen dimensions, speed, etc.)
+├── .git             # Git version control directory (ignore)
+├── .gitignore       # Specifies files and directories to be ignored by Git
+├── README.md        # Project documentation and guide
+├── requirements.txt # List of required libraries and dependencies
+├── run_game.py      # Main script used to launch the game
+└── src              # Main source code directory
+    ├── assets       # Game resources, including images and sounds
+    │   ├── images   # Directory containing game images
+    │   │   └── .gitkeep # Empty file to preserve the directory in Git
+    │   └── sounds   # Directory containing game audio files
+    │       └── .gitkeep # Empty file to preserve the directory in Git
+    ├── engine       # Core game logic and engine
+    │   ├── game.py  # Main classes and functions for gameplay and game management
+    │   └── __init__.py # Required for Python to recognize this directory as a package
+    └── utils.py     # General-purpose utility functions used throughout the project
 ```
 
-## توضیحات فایل‌ها و پوشه‌ها
+## File and Directory Descriptions
 
-*   `config.py`: این فایل شامل تنظیمات کلی بازی مانند ابعاد پنجره، رنگ‌ها، سرعت فریم و سایر مقادیر ثابت است.
-*   `.gitignore`: این فایل به گیت می‌گوید که کدام فایل‌ها و پوشه‌ها را نباید در مخزن (repository) ذخیره کند. معمولاً فایل‌های موقت، کش‌ها و پوشه‌های مربوط به محیط مجازی در این لیست قرار می‌گیرد. (لازم به کاری از طرف شما نیست.)
-*   `README.md`: این فایل راهنمای پروژه است و اطلاعاتی در مورد پروژه، نحوه نصب و اجرا و ساختار آن ارائه می‌دهد.
-*   `requirements.txt`: این فایل لیست تمام کتابخانه‌های خارجی که پروژه شما به آن‌ها نیاز دارد را مشخص می‌کند. با استفاده از این فایل می‌توان به راحتی وابستگی‌های پروژه را نصب کرد. (اگر پکیج یا کتابخانه‌ای استفاده می‌کنید، باید آن را با ورژن در این فایل ذکر کنید.)
-*   `run_game.py`: این اسکریپت نقطه ورود اصلی برای اجرای بازی است. با اجرای این فایل، بازی شروع می‌شود.
-*   `src/`: این پوشه حاوی تمام کدهای منبع اصلی بازی است.
-    *   `src/assets/`: این پوشه برای نگهداری فایل‌های تصویری، صوتی و سایر منابع مورد نیاز بازی استفاده می‌شود.
-        *   `src/assets/images/`: مخصوص نگهداری تصاویر بازی.
-        *   `src/assets/sounds/`: مخصوص نگهداری فایل‌های صوتی بازی.
-    *   `src/engine/`: این پوشه شامل منطق اصلی و مرکزی بازی است.
-        *   `src/engine/game.py`: این فایل احتمالاً شامل کلاس اصلی بازی، مدیریت حلقه بازی (game loop)، پردازش رویدادها و سایر بخش‌های کلیدی گیم‌پلی است.
-    *   `src/utils.py`: این فایل شامل توابع و کلاس‌های کمکی است که در بخش‌های مختلف پروژه مورد استفاده قرار می‌گیرند تا از تکرار کد جلوگیری شود و خوانایی کد افزایش یابد.
+- **`config.py`**: Contains the game's general settings, including window dimensions, colors, frame rate, and other constants.
+- **`.gitignore`**: Specifies which files and directories Git should exclude from the repository. This typically includes temporary files, cache files, and virtual environment directories. No action is required from the user.
+- **`README.md`**: The project's documentation file, providing information about the project, installation instructions, execution instructions, and project structure.
+- **`requirements.txt`**: Lists all external Python libraries required by the project. It allows dependencies to be installed easily. Any additional packages or libraries used in the project should be listed here, preferably with their respective versions.
+- **`run_game.py`**: The main entry point for the game. Running this script launches the game.
+- **`src/`**: Contains all the main source code of the game.
+  - **`src/assets/`**: Stores images, audio files, and other resources required by the game.
+    - **`src/assets/images/`**: Contains the images used in the game.
+    - **`src/assets/sounds/`**: Contains the audio files used in the game.
+  - **`src/engine/`**: Contains the core logic and functionality of the game.
+    - **`src/engine/game.py`**: Expected to contain the main game class, game loop management, event handling, and other essential gameplay components.
+  - **`src/utils.py`**: Contains utility functions and helper classes used across different parts of the project. These help reduce code duplication and improve readability.
 
-## نحوه نصب و اجرا
+## Installation and Execution
 
-برای نصب و اجرای این پروژه، مراحل زیر را دنبال کنید:
+Follow the steps below to install and run the project:
 
-1.  **نصب dependencyها:**
+### 1. Install Dependencies
 
-    کتابخانه‌های مورد نیاز پروژه را با استفاده از فایل `requirements.txt` نصب کنید:
-    ```bash
-    pip install -r requirements.txt
-    ```
+Install the required libraries using the `requirements.txt` file:
 
-2.  **اجرای بازی: باید پیاده‌سازی شود**
+```bash
+pip install -r requirements.txt
+```
 
-    بازی را با اجرای اسکریپت `run_game.py` شروع کنید:
-    ```bash
-    python run_game.py
-    ```
+### 2. Run the Game
+
+**Implementation pending.**
+
+Launch the game by executing the `run_game.py` script:
+
+```bash
+python run_game.py
+```
